@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\ITL Banknote Recyclers-20250428T062523Z-001\ITL Banknote Recyclers\- Code Examples\C#\ITLlib.dll\ITLlib\ITLlib.csproj" />
+    <ProjectReference Include="..\ITLlib\ITLlib.csproj" />
   </ItemGroup>
 
   <ItemGroup>

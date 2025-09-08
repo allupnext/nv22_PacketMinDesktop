@@ -5,9 +5,9 @@ VisualStudioVersion = 17.13.35825.156
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NV22SpectralInteg", "NV22SpectralInteg\NV22SpectralInteg.csproj", "{7309921D-F4CC-439A-AB0D-F14E492316FD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ITLlib", "..\..\ITL Banknote Recyclers-20250428T062523Z-001\ITL Banknote Recyclers\- Code Examples\C#\ITLlib.dll\ITLlib\ITLlib.csproj", "{03723A62-C447-4406-AD07-1A4D7EBE23A2}"
-EndProject
 Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "eSSP_example_Setup", "eSSP_example_Setup\eSSP_example_Setup.vdproj", "{693FB084-006B-80F4-2DC7-2B1D94DC5291}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ITLlib", "ITLlib\ITLlib.csproj", "{03723A62-C447-4406-AD07-1A4D7EBE23A2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -19,12 +19,12 @@ Global
 		{7309921D-F4CC-439A-AB0D-F14E492316FD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7309921D-F4CC-439A-AB0D-F14E492316FD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7309921D-F4CC-439A-AB0D-F14E492316FD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{693FB084-006B-80F4-2DC7-2B1D94DC5291}.Debug|Any CPU.ActiveCfg = Debug
+		{693FB084-006B-80F4-2DC7-2B1D94DC5291}.Release|Any CPU.ActiveCfg = Release
 		{03723A62-C447-4406-AD07-1A4D7EBE23A2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{03723A62-C447-4406-AD07-1A4D7EBE23A2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{03723A62-C447-4406-AD07-1A4D7EBE23A2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{03723A62-C447-4406-AD07-1A4D7EBE23A2}.Release|Any CPU.Build.0 = Release|Any CPU
-		{693FB084-006B-80F4-2DC7-2B1D94DC5291}.Debug|Any CPU.ActiveCfg = Debug
-		{693FB084-006B-80F4-2DC7-2B1D94DC5291}.Release|Any CPU.ActiveCfg = Release
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
