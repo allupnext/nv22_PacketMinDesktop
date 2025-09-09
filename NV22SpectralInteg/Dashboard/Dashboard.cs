@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using NV22SpectralInteg.Classes;
+using NV22SpectralInteg.Login;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -13,6 +14,8 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using NV22SpectralInteg.Services;
+
 
 namespace NV22SpectralInteg.Dashboard
 {
@@ -80,17 +83,17 @@ namespace NV22SpectralInteg.Dashboard
             Panel headerPanel = new Panel
             {
                 Dock = DockStyle.Top,
-                BackColor = Color.FromArgb(30, 30, 30),
+                BackColor = Color.Transparent,
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                Padding = new Padding(0, 0, 0, 10)
+                Padding = new Padding(0, 0, 0, 10),
             };
             this.Controls.Add(headerPanel);
 
             titleImage = new PictureBox
             {
                 Name = "titlePictureBox",
-                Size = new Size(300, 150),
+                Size = new Size(300, 200),
                 SizeMode = PictureBoxSizeMode.Zoom,
                 BackColor = Color.Transparent
             };
@@ -118,9 +121,11 @@ namespace NV22SpectralInteg.Dashboard
             {
                 Text = $"${AppSession.CustomerBALANCE}",
                 ForeColor = Color.White,
-                Font = new Font("Poppins", 48, FontStyle.Bold),
+                Font = new Font("Poppins", 36, FontStyle.Bold),
                 AutoSize = true,
-                Margin = new Padding(0)
+                Margin = new Padding(5, 0, 0, 0),
+                BackColor = Color.Transparent,
+                TextAlign = ContentAlignment.MiddleCenter
             };
 
             FlowLayoutPanel balancePanel = new FlowLayoutPanel
@@ -128,16 +133,20 @@ namespace NV22SpectralInteg.Dashboard
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 BackColor = Color.Transparent,
-                Margin = new Padding(0)
+                Margin = new Padding(0),
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false
             };
 
             Label balanceSubTextLabel = new Label
             {
                 Text = "Balance:",
                 ForeColor = Color.Silver,
-                Font = new Font("Poppins", 24, FontStyle.Regular),
+                Font = new Font("Poppins", 20, FontStyle.Regular),
                 AutoSize = true,
-                Margin = new Padding(0, 35, 0, 0)
+                Margin = new Padding(0, 35, 0, 0),
+                BackColor = Color.Transparent,
+                TextAlign = ContentAlignment.MiddleCenter
             };
 
             balancePanel.Controls.Add(balanceSubTextLabel);
@@ -206,15 +215,18 @@ namespace NV22SpectralInteg.Dashboard
                 Text = "Confirm",
                 ForeColor = Color.White,
                 BackColor = Color.FromArgb(40, 167, 69),
-                Font = new Font("Poppins", 20, FontStyle.Bold),
+                Font = new Font("Poppins", 18, FontStyle.Bold),
                 Width = 360,
-                Height = 50,
+                Height = 60,
                 Cursor = Cursors.Hand,
                 TextAlign = ContentAlignment.MiddleCenter,
                 FlatStyle = FlatStyle.Flat,
-                Visible = false
+                Visible = false,
             };
             confirmButton.FlatAppearance.BorderSize = 0;
+            confirmButton.Region = Region.FromHrgn(
+                NativeMethods.CreateRoundRectRgn(0, 0, confirmButton.Width, confirmButton.Height, 12, 12)
+            );
             confirmButton.Click += ConfirmButton_Click;
             contentPanel.Controls.Add(confirmButton);
 
@@ -298,7 +310,7 @@ namespace NV22SpectralInteg.Dashboard
                     client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
                     client.DefaultRequestHeaders.UserAgent.ParseAdd("PostmanRuntime/7.35.0");
                     client.DefaultRequestHeaders.Remove("Authorization");
-                    client.DefaultRequestHeaders.Add("Authorization", "a55cf4p6-e57a-3w20-8ag4-33s55d27ev78");
+                    client.DefaultRequestHeaders.Add("Authorization", $"{ApiService.AuthToken}");
                     client.DefaultRequestHeaders.Add("Cookie", "JSESSIONID=C4537CD8D22C7AF20A50A08992FD3EFF; Path=/; Secure; HttpOnly");
 
                     HttpResponseMessage response = await client.PostAsync(apiUrl, content);
@@ -333,7 +345,7 @@ namespace NV22SpectralInteg.Dashboard
                         {
                             // User clicked "Add New", so reset the dashboard.
                             ResetForNewTransaction();
-                            //MainLoop();
+                            MainLoop();
                         }
                         else
                         {
@@ -371,25 +383,23 @@ namespace NV22SpectralInteg.Dashboard
         {
             Logger.Log("🔄 Resetting dashboard for a new transaction...");
 
-            // 1. Clear the live data from the validator. This is the most important step.
             _validator.ClearNoteEscrowCounts();
 
-            // 2. Reset the grand total variable.
             this.currentGrandTotal = 0;
 
-            // 3. Refresh the UI. This calls CreateNotesTable and ToggleDataView.
-            // Since the data is now empty, it will correctly show the "Please Add your Amount" message.
             UpdateNotesDisplay();
 
-            // 4. Restart the hardware polling loop on a background thread to accept new notes.
             Logger.Log("▶️ Restarting MainLoop for new transaction...");
         }
 
         private Panel CreateNotesTable(out int grandTotal)
         {
+            Logger.Log("CreateNotesTable called.");
+
             grandTotal = 0;
             var counts = _validator?.NoteEscrowCounts ?? new Dictionary<string, int>();
             //var counts = testCounts;
+            Logger.Log($"Counts loaded. Total denominations: {counts.Count}");
 
             notesTable = new TableLayoutPanel
             {
@@ -397,8 +407,8 @@ namespace NV22SpectralInteg.Dashboard
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 BackColor = Color.FromArgb(45, 45, 45),
-                Padding = new Padding(0),
-                Margin = new Padding(0),
+                Padding = new Padding(1),
+                Margin = new Padding(10),
                 GrowStyle = TableLayoutPanelGrowStyle.AddRows,
                 CellBorderStyle = TableLayoutPanelCellBorderStyle.None,
                 Dock = DockStyle.Top
@@ -415,7 +425,10 @@ namespace NV22SpectralInteg.Dashboard
             int row = 1;
             if (counts.Any())
             {
-                foreach (var kvp in counts.OrderBy(k => k.Key))
+                Logger.Log("Beginning to populate table rows...");
+
+                // ✅ CHANGE 2: Sort numerically by parsing the integer from the key.
+                foreach (var kvp in counts.OrderBy(k => int.Parse(Regex.Match(k.Key, @"\d+").Value)))
                 {
                     string denominationLabel = kvp.Key;
                     int count = kvp.Value;
@@ -423,6 +436,8 @@ namespace NV22SpectralInteg.Dashboard
                     decimal denomination = match.Success && decimal.TryParse(match.Value, out var d) ? d : 0;
                     decimal total = denomination * count;
                     grandTotal += (int)total;
+
+                    Logger.Log($"Added row - Denomination: {denomination} USD, Count: {count}, Total: {total}");
 
                     AddStyledCell(notesTable, $"{denomination} USD", 0, row, alignment: ContentAlignment.MiddleCenter);
                     AddStyledCell(notesTable, count.ToString(), 1, row, alignment: ContentAlignment.MiddleCenter);
@@ -432,9 +447,12 @@ namespace NV22SpectralInteg.Dashboard
 
                 AddStyledCell(notesTable, "Grand Total", 0, row, header: true, colSpan: 2, alignment: ContentAlignment.MiddleCenter);
                 AddStyledCell(notesTable, grandTotal.ToString(), 2, row, header: true, alignment: ContentAlignment.MiddleRight);
-
+                Logger.Log($"Grand total calculated and added to table: {grandTotal}");
             }
-
+            else
+            {
+                Logger.Log("No note counts found. Table will not display any data rows.");
+            }
 
             var wrapper = new Panel
             {
@@ -445,7 +463,9 @@ namespace NV22SpectralInteg.Dashboard
                 Dock = DockStyle.None
             };
             wrapper.Controls.Add(notesTable);
-            notesTable.Width = wrapper.Width - 20;
+            notesTable.Width = wrapper.Width - (wrapper.VerticalScroll.Visible ? SystemInformation.VerticalScrollBarWidth : 0);
+
+            Logger.Log($"Notes table created with wrapper size: {wrapper.Width}x{wrapper.Height}");
 
             this.currentGrandTotal = grandTotal;
             return wrapper;
@@ -460,7 +480,7 @@ namespace NV22SpectralInteg.Dashboard
                 Font = new Font("Poppins", 14, header ? FontStyle.Bold : FontStyle.Regular),
                 BackColor = header ? Color.FromArgb(60, 60, 60) : Color.FromArgb(45, 45, 45),
                 Dock = DockStyle.Fill,
-                MinimumSize = new Size(0, 30),
+                MinimumSize = new Size(0, 40),
                 Margin = new Padding(0), // Use Margin 0 for perfect borders
                 Padding = new Padding(10, 0, 10, 0), // ✅ ADD PADDING for left/right alignment
                 TextAlign = alignment // ✅ USE THE NEW ALIGNMENT PARAMETER
@@ -482,6 +502,7 @@ namespace NV22SpectralInteg.Dashboard
 
         private void Validator_NoteEscrowUpdated(string key, int count)
         {
+            Logger.Log("call Validator_NoteEscrowUpdated...");
             if (this.InvokeRequired)
                 this.Invoke(new MethodInvoker(UpdateNotesDisplay));
             else
@@ -493,6 +514,7 @@ namespace NV22SpectralInteg.Dashboard
             contentPanel.Controls.Remove(tableWrapper);
             tableWrapper.Dispose();
 
+            Logger.Log("Updating Table...");
             tableWrapper = CreateNotesTable(out int grandTotal);
             contentPanel.Controls.Add(tableWrapper);
 
@@ -502,6 +524,7 @@ namespace NV22SpectralInteg.Dashboard
         private void ToggleDataView()
         {
             var hasData = _validator?.NoteEscrowCounts.Any() ?? false;
+            //var hasData = testCounts.Any();
 
             // This part is the same, it ensures the correct controls are set to visible/invisible.
             addAmountLabel.Visible = !hasData;
@@ -530,8 +553,9 @@ namespace NV22SpectralInteg.Dashboard
                 Panel buttonWrapper = new Panel
                 {
                     Width = tableWrapper.Width,
-                    Height = confirmButton.Height + 10,
-                    BackColor = Color.Transparent
+                    Height = confirmButton.Height,
+                    BackColor = Color.Transparent,
+                    Margin = new Padding(0, 30, 0, 0)
                 };
 
                 confirmButton.Anchor = AnchorStyles.None;
@@ -544,15 +568,17 @@ namespace NV22SpectralInteg.Dashboard
                 contentPanel.Controls.Add(centerPanel); // Add the new panel with the table
 
                 // Centering logic
+               
+                int topMargin = 10; 
                 centerPanel.Location = new Point(
                     (contentPanel.Width - centerPanel.Width) / 2,
-                    (contentPanel.Height - centerPanel.Height) / 2
+                    topMargin
                 );
                 contentPanel.Resize += (s, e) =>
                 {
                     centerPanel.Location = new Point(
                         (contentPanel.Width - centerPanel.Width) / 2,
-                        (contentPanel.Height - centerPanel.Height) / 2
+                        topMargin
                     );
                 };
             }
@@ -632,13 +658,13 @@ namespace NV22SpectralInteg.Dashboard
                 }
 
                 // If a matching port was found, set it globally and connect
-                if (targetComPort != null)
-                {
+                //if (targetComPort != null)
+                //{
                     Logger.Log("✅ Device found. Proceeding with automatic connection.");
 
                     // --- AUTOMATICALLY SET GLOBALS AND CONNECT ---
-                    Global.ComPort = targetComPort;
-                    Global.SSPAddress = Byte.Parse("0");
+                    //Global.ComPort = targetComPort;
+                    //Global.SSPAddress = Byte.Parse("0");
 
                     Logger.Log("✅ Validator instance created successfully.");
 
@@ -646,28 +672,28 @@ namespace NV22SpectralInteg.Dashboard
                     _validator.NoteEscrowUpdated += Validator_NoteEscrowUpdated;
 
                     // Update UI to show what happened
-                    comboBoxComPorts.Items.Clear();
-                    comboBoxComPorts.Items.Add($"{targetComPort} - Auto-Connecting...");
-                    comboBoxComPorts.SelectedIndex = 0;
-                    comboBoxComPorts.Enabled = false;
-                }
-                else
-                {
-                    // --- FAIL IF NO DEVICE IS FOUND ---
-                    Logger.Log("❌ No 'USB Serial Device' found. Automatic connection failed.");
-                    //MessageBox.Show(
-                    //  "Required 'USB Serial Device' not found. Please connect the device and restart the application.",
-                    //  "Device Not Found",
-                    //  MessageBoxButtons.OK,
-                    //  MessageBoxIcon.Error
-                    //);
+                    //comboBoxComPorts.Items.Clear();
+                    //comboBoxComPorts.Items.Add($"{targetComPort} - Auto-Connecting...");
+                    //comboBoxComPorts.SelectedIndex = 0;
+                    //comboBoxComPorts.Enabled = false;
+                //}
+                //else
+                //{
+                //    // --- FAIL IF NO DEVICE IS FOUND ---
+                //    Logger.Log("❌ No 'USB Serial Device' found. Automatic connection failed.");
+                //    //MessageBox.Show(
+                //    //  "Required 'USB Serial Device' not found. Please connect the device and restart the application.",
+                //    //  "Device Not Found",
+                //    //  MessageBoxButtons.OK,
+                //    //  MessageBoxIcon.Error
+                //    //);
 
-                    // Update UI to reflect the failure state
-                    comboBoxComPorts.Items.Clear();
-                    comboBoxComPorts.Items.Add("Device Not Found");
-                    comboBoxComPorts.SelectedIndex = 0;
-                    comboBoxComPorts.Enabled = false;
-                }
+                //    // Update UI to reflect the failure state
+                //    comboBoxComPorts.Items.Clear();
+                //    comboBoxComPorts.Items.Add("Device Not Found");
+                //    comboBoxComPorts.SelectedIndex = 0;
+                //    comboBoxComPorts.Enabled = false;
+                //}
             }
             catch (Exception ex)
             {
@@ -1015,20 +1041,20 @@ namespace NV22SpectralInteg.Dashboard
 
 
 
-        //public Dictionary<string, int> testCounts = new Dictionary<string, int>
-        //{
-        //    { "$1", 2 },
-        //    { "$2", 2 },
-        //    { "$5", 2 },
-        //    { "$10", 2 },
-        //    { "$20", 2 },
-        //    { "$50", 2 },
-        //    { "$100", 2 }
-        //};
-
         public Dictionary<string, int> testCounts = new Dictionary<string, int>
         {
-            { "$0", 0 },
+            { "$1", 2 },
+            { "$2", 2 },
+            { "$5", 2 },
+            { "$10", 2 },
+            { "$20", 2 },
+            { "$50", 2 },
+            { "$100", 2 }
         };
+
+        //public Dictionary<string, int> testCounts = new Dictionary<string, int>
+        //{
+        //    { "$0", 0 },
+        //};
     }
 }

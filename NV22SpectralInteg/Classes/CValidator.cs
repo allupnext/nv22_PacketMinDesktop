@@ -717,6 +717,7 @@ namespace NV22SpectralInteg.Classes
                 int noteVal = 0;
                 for (byte i = 1; i < m_cmd.ResponseDataLength; i++)
                 {
+                    Logger.Log("m_cmd.ResponseData[i] -- " + m_cmd.ResponseData[i].ToString());
                     switch (m_cmd.ResponseData[i])
                     {
                         case CCommands.SSP_POLL_SLAVE_RESET:

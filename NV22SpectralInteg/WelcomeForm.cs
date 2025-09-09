@@ -1,18 +1,15 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.IO; // Required for Path and File operations
 using System.Windows.Forms;
 
 namespace NV22SpectralInteg
 {
     public partial class WelcomeForm : Form
     {
-        private PictureBox pictureBox; // Make it accessible to event handlers
+        // Declare the PictureBox as nullable (?) to resolve the CS8618 warning.
+        // This tells the compiler that we intend for it to be potentially null.
+        private PictureBox? pictureBox;
 
         public WelcomeForm()
         {
@@ -20,20 +17,20 @@ namespace NV22SpectralInteg
 
             // Make the form transparent and borderless
             this.FormBorderStyle = FormBorderStyle.None;
-            this.BackColor = Color.Lime;  // Arbitrary color for transparency key
-            this.TransparencyKey = Color.Lime;
+            this.BackColor = Color.LimeGreen; // Using a standard color name
+            this.TransparencyKey = Color.LimeGreen;
 
-            // Set size and position
+            // Set size and position to cover the entire screen
             this.WindowState = FormWindowState.Maximized;
             this.StartPosition = FormStartPosition.CenterScreen;
             this.TopMost = true;
             this.ShowInTaskbar = false;
 
-            // Prevent resizing
+            // Prevent resizing by the user (though maximized already handles this)
             this.MaximizeBox = false;
             this.MinimizeBox = false;
 
-            // Create a panel with green background
+            // Create a panel with a green background that fills the form
             Panel backgroundPanel = new Panel
             {
                 Dock = DockStyle.Fill,
@@ -41,52 +38,62 @@ namespace NV22SpectralInteg
             };
             this.Controls.Add(backgroundPanel);
 
-            // Load image
+            // Define the path to the logo image
             string imagePath = Path.Combine(Application.StartupPath, "Image", "Logo.png");
 
+            // Check if the image file exists before trying to use it
             if (!File.Exists(imagePath))
             {
                 MessageBox.Show("Image not found:\n" + imagePath, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                // Close the welcome form if the logo is missing
+                this.Close();
                 return;
             }
 
-            // Initialize picture box
+            // Initialize the PictureBox to display the logo
             pictureBox = new PictureBox
             {
                 Image = Image.FromFile(imagePath),
                 SizeMode = PictureBoxSizeMode.Zoom,
-                Size = new Size(180, 180)
+                // Increased size of the logo container
+                Size = new Size(400, 400),
+                // Set a background color to match the panel to avoid potential rendering artifacts
+                BackColor = Color.Transparent
             };
 
+            // Add the PictureBox to the background panel
             backgroundPanel.Controls.Add(pictureBox);
 
-            // Center image once form is shown
+            // Center the image once the form is loaded and displayed.
+            // Using the 'Shown' event ensures the form has its final dimensions.
             this.Shown += (s, e) =>
             {
                 CenterImage();
             };
 
-            // Optional: keep image centered if user resizes screen
+            // Keep the image centered if the screen resolution changes while the form is open.
             this.Resize += (s, e) =>
             {
                 CenterImage();
             };
         }
 
+        /// <summary>
+        /// Calculates the center position of the form and moves the PictureBox to it.
+        /// </summary>
         private void CenterImage()
         {
-            if (pictureBox != null)
+            // The null check is important because pictureBox is nullable
+            if (pictureBox != null && this.Parent == null) // The parent check prevents issues in the designer
             {
-                pictureBox.Location = new Point(
-                    (this.ClientSize.Width - pictureBox.Width) / 2,
-                    (this.ClientSize.Height - pictureBox.Height) / 2
-                );
+                // Calculate the point to place the top-left corner of the PictureBox
+                int x = (this.ClientSize.Width - pictureBox.Width) / 2;
+                int y = (this.ClientSize.Height - pictureBox.Height) / 2;
+                pictureBox.Location = new Point(x, y);
             }
         }
 
-        private void Form1_Load(object sender, EventArgs e)
-        {
-            // Not needed if using Shown event
-        }
+        // This event handler is not needed, so it can be removed for cleaner code.
+        // private void Form1_Load(object sender, EventArgs e) {}
     }
 }
