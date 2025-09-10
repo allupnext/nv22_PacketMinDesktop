@@ -17,7 +17,6 @@ namespace NV22SpectralInteg.Dashboard
         // Constructor that accepts the name and amount to display
         public SuccessPopup(string recipientName, decimal amount)
         {
-            InitializeComponent(); // This is important, don't comment it out
             InitializeCustomComponents(recipientName, amount);
         }
 
@@ -36,7 +35,7 @@ namespace NV22SpectralInteg.Dashboard
             Label successIcon = new Label
             {
                 Text = "✓",
-                Font = new Font("Poppins", 24F, FontStyle.Bold),
+                Font = new Font("Poppins", 25F, FontStyle.Bold),
                 ForeColor = Color.White,
                 BackColor = Color.FromArgb(46, 204, 113), // A nice green color
                 Size = new Size(75, 75),
@@ -108,16 +107,17 @@ namespace NV22SpectralInteg.Dashboard
                 Size = new Size(this.ClientSize.Width - 40, 50),
                 TextAlign = ContentAlignment.MiddleCenter,
                 Height = 80,
-                Location = new Point(20, nameLabel.Bottom + 40),
+                Location = new Point(20, nameLabel.Bottom + 30),
             };
 
             // Receipt Info Message
             Label infoLabel = new Label
             {
-                Text = "Transaction completed. Receipt has been sent to your registered Mobile number.",
+                Text = "Transaction completed. \nReceipt has been sent to your registered Mobile number.",
                 Font = new Font("Poppins", 9F, FontStyle.Regular),
                 ForeColor = Color.Gray,
-                Size = new Size(this.ClientSize.Width - 60, 40),
+                AutoSize = false,
+                Size = new Size(this.ClientSize.Width - 60, 70),
                 TextAlign = ContentAlignment.MiddleCenter,
                 Location = new Point(30, amountLabel.Bottom + 5)
             };

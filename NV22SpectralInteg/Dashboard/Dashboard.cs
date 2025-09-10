@@ -53,7 +53,7 @@ namespace NV22SpectralInteg.Dashboard
             timer1.Interval = pollTimer;
             reconnectionTimer.Tick += new EventHandler(reconnectionTimer_Tick);
 
-            //UpdateNotesDisplay();
+            UpdateNotesDisplay();
         }
 
         private void reconnectionTimer_Tick(object sender, EventArgs e)
@@ -61,13 +61,13 @@ namespace NV22SpectralInteg.Dashboard
             if (sender is System.Windows.Forms.Timer t)
                 t.Enabled = false;
         }
-
+       
         public void UpdateBalanceDisplay()
         {
             if (balanceLabel != null)
             {
-                decimal balance = AppSession.CustomerBALANCE;
-                balanceLabel.Text = $"${balance:F2}";
+                decimal balance = AppSession.CustomerBALANCE ?? 0.00m;
+                balanceLabel.Text = $"${balance.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)}";
             }
 
             Logger.Log($"[BALANCE] Balance label updated to: {balanceLabel.Text}");
@@ -76,7 +76,7 @@ namespace NV22SpectralInteg.Dashboard
         private void InitializeDashboardUI()
         {
             this.Text = "Dashboard";
-            this.BackColor = ColorTranslator.FromHtml("#1E1E1E");
+            this.BackColor = ColorTranslator.FromHtml("#11150f");
             this.WindowState = FormWindowState.Maximized;
             this.FormBorderStyle = FormBorderStyle.None;
 
@@ -86,14 +86,14 @@ namespace NV22SpectralInteg.Dashboard
                 BackColor = Color.Transparent,
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                Padding = new Padding(0, 0, 0, 10),
+                Padding = new Padding(0)
             };
             this.Controls.Add(headerPanel);
 
             titleImage = new PictureBox
             {
                 Name = "titlePictureBox",
-                Size = new Size(300, 200),
+                Size = new Size(320, 200),
                 SizeMode = PictureBoxSizeMode.Zoom,
                 BackColor = Color.Transparent
             };
@@ -102,55 +102,55 @@ namespace NV22SpectralInteg.Dashboard
             if (File.Exists(imagePath))
                 titleImage.Image = Image.FromFile(imagePath);
 
+
+
             Label welcomeTextLabel = new Label
             {
                 Text = "Welcome,",
                 ForeColor = Color.Silver,
-                Font = new Font("Poppins", 22, FontStyle.Regular),
-                AutoSize = true
-            };
-            Label customerNameLabel = new Label
-            {
-                Text = $"{AppSession.CustomerName}",
-                ForeColor = Color.White,
-                Font = new Font("Poppins", 22, FontStyle.Bold),
-                AutoSize = true
+                Font = new Font("Poppins", 24, FontStyle.Regular),
+                AutoSize = false,
+                Size = new Size(300, 60),
+                TextAlign = ContentAlignment.MiddleCenter,
+                Padding = new Padding(0),
             };
 
+            string customerName = AppSession.CustomerName; 
+            Font customerFont = new Font("Poppins", 40, FontStyle.Bold);
+
+            Size nameSize = TextRenderer.MeasureText(customerName, customerFont);
+            Label customerNameLabel = new Label
+            {
+                Text = customerName,
+                ForeColor = Color.White,
+                Font = customerFont,
+                AutoSize = false,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Size = nameSize 
+            };
+
+            
+
+           
+            // 4. Create the label using the correct text and size
             balanceLabel = new Label
             {
                 Text = $"${AppSession.CustomerBALANCE}",
                 ForeColor = Color.White,
-                Font = new Font("Poppins", 36, FontStyle.Bold),
+                Font = new Font("Poppins", 40, FontStyle.Bold),
                 AutoSize = true,
-                Margin = new Padding(5, 0, 0, 0),
-                BackColor = Color.Transparent,
-                TextAlign = ContentAlignment.MiddleCenter
+                //Size = balanceSize, // The size now correctly includes the '$'
+                TextAlign = ContentAlignment.MiddleCenter,
             };
-
-            FlowLayoutPanel balancePanel = new FlowLayoutPanel
-            {
-                AutoSize = true,
-                AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                BackColor = Color.Transparent,
-                Margin = new Padding(0),
-                FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = false
-            };
-
             Label balanceSubTextLabel = new Label
             {
-                Text = "Balance:",
-                ForeColor = Color.Silver,
-                Font = new Font("Poppins", 20, FontStyle.Regular),
-                AutoSize = true,
-                Margin = new Padding(0, 35, 0, 0),
-                BackColor = Color.Transparent,
-                TextAlign = ContentAlignment.MiddleCenter
+                Text = "Balance",
+                ForeColor = Color.DarkGray,
+                Font = new Font("Poppins", 24, FontStyle.Regular),
+                AutoSize = false,
+                Size = new Size(360, 80), 
+                TextAlign = ContentAlignment.MiddleCenter,
             };
-
-            balancePanel.Controls.Add(balanceSubTextLabel);
-            balancePanel.Controls.Add(balanceLabel);
 
             Button logoutButton = new Button
             {
@@ -169,32 +169,33 @@ namespace NV22SpectralInteg.Dashboard
             headerPanel.Controls.Add(titleImage);
             headerPanel.Controls.Add(welcomeTextLabel);
             headerPanel.Controls.Add(customerNameLabel);
-            headerPanel.Controls.Add(balancePanel);
+            headerPanel.Controls.Add(balanceLabel);
+            headerPanel.Controls.Add(balanceSubTextLabel);
             headerPanel.Controls.Add(logoutButton);
-
 
 
             headerPanel.Layout += (sender, e) =>
             {
-                int verticalSpacing = 8;
-                int padding = 20;
-
                 titleImage.Location = new Point((headerPanel.Width - titleImage.Width) / 2, 10);
 
-                int welcomeTotalWidth = welcomeTextLabel.Width + customerNameLabel.Width + 5;
-                welcomeTextLabel.Location = new Point((headerPanel.Width - welcomeTotalWidth) / 2, titleImage.Bottom + verticalSpacing);
-                customerNameLabel.Location = new Point(welcomeTextLabel.Right + 5, welcomeTextLabel.Top);
+                welcomeTextLabel.Location = new Point((headerPanel.Width - welcomeTextLabel.Width) / 2, titleImage.Bottom + 10);
 
-                balancePanel.Location = new Point((headerPanel.Width - balancePanel.Width) / 2, welcomeTextLabel.Bottom + verticalSpacing);
+                customerNameLabel.Location = new Point((headerPanel.Width - customerNameLabel.Width) / 2, welcomeTextLabel.Bottom - 20);
 
-                logoutButton.Location = new Point(headerPanel.Width - logoutButton.Width - padding, padding);
+                balanceSubTextLabel.Location = new Point((headerPanel.Width - balanceSubTextLabel.Width) / 2, customerNameLabel.Bottom);
+
+                balanceLabel.Location = new Point((headerPanel.Width - balanceLabel.Width) / 2, balanceSubTextLabel.Bottom - 25);
+
+                logoutButton.Location = new Point(headerPanel.Width - logoutButton.Width - 20, 20);
             };
+
+
 
             contentPanel = new Panel
             {
                 Dock = DockStyle.Fill,
                 BackColor = this.BackColor,
-                Padding = new Padding(20)
+                Padding = new Padding(0,20,0,0)
             };
             this.Controls.Add(contentPanel);
             contentPanel.BringToFront();
@@ -214,6 +215,7 @@ namespace NV22SpectralInteg.Dashboard
             {
                 Text = "Confirm",
                 ForeColor = Color.White,
+                //BackColor = Color.FromArgb(40, 167, 69),
                 BackColor = Color.FromArgb(40, 167, 69),
                 Font = new Font("Poppins", 18, FontStyle.Bold),
                 Width = 360,
@@ -273,31 +275,31 @@ namespace NV22SpectralInteg.Dashboard
 
                     int kioskTotalAmount = amountDetails.Sum(a => a.total);
 
-                    var requestBody = new
-                    {
-                        kioskId = AppSession.KioskId,
-                        kioskRegId = AppSession.KioskRegId,
-                        customerRegId = AppSession.CustomerRegId,
-                        kioskTotalAmount = kioskTotalAmount,
-                        amountDetails = amountDetails
-                    };
-
                     //var requestBody = new
                     //{
                     //    kioskId = AppSession.KioskId,
                     //    kioskRegId = AppSession.KioskRegId,
                     //    customerRegId = AppSession.CustomerRegId,
-                    //    kioskTotalAmount = 0,
-                    //    amountDetails = new[]
-                    //    {
-                    //        new
-                    //        {
-                    //            denomination = 0,
-                    //            count = 0,
-                    //            total = 0
-                    //        }
-                    //    }
+                    //    kioskTotalAmount = kioskTotalAmount,
+                    //    amountDetails = amountDetails
                     //};
+
+                    var requestBody = new
+                    {
+                        kioskId = AppSession.KioskId,
+                        kioskRegId = AppSession.KioskRegId,
+                        customerRegId = AppSession.CustomerRegId,
+                        kioskTotalAmount = 0,
+                        amountDetails = new[]
+                        {
+                            new
+                            {
+                                denomination = 0,
+                                count = 0,
+                                total = 0
+                            }
+                        }
+                    };
 
 
                     Logger.Log("📤 Sending transaction request to API...");
@@ -329,7 +331,8 @@ namespace NV22SpectralInteg.Dashboard
                     {
                         Logger.Log($"❌ Transaction failed → {result.message}");
                         MessageBox.Show($"{result.message}", "Transaction Failed", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        ResetForNewTransaction(); // Reset the screen so the user can try again.
+                        //ResetForNewTransaction(); 
+
                     }
                     else
                     {
@@ -339,22 +342,6 @@ namespace NV22SpectralInteg.Dashboard
 
                         var successPopup = new SuccessPopup(AppSession.CustomerName, currentGrandTotal);
                         successPopup.ShowDialog(this);
-
-                        // Now, handle the user's choice from the popup.
-                        if (successPopup.DialogResult == DialogResult.OK)
-                        {
-                            // User clicked "Add New", so reset the dashboard.
-                            ResetForNewTransaction();
-                            MainLoop();
-                        }
-                        else
-                        {
-                            // User clicked "Log Out" or closed the popup.
-                            this.Hide();
-                            stoprunning(); // Now it's correct to call this to log out and shut down hardware.
-                            var login = new Login.LoginForm();
-                            login.Show();
-                        }
 
                         try
                         {
@@ -368,7 +355,26 @@ namespace NV22SpectralInteg.Dashboard
                         {
                             Logger.LogError("🚨 Error parsing balance", ex);
                         }
-                        UpdateBalanceDisplay();
+
+                        
+
+                        // Now, handle the user's choice from the popup.
+                        if (successPopup.DialogResult == DialogResult.OK)
+                        {
+                            UpdateBalanceDisplay();
+                            ResetForNewTransaction();
+                            MainLoop();
+                        }
+                        else
+                        {
+                            // User clicked "Log Out" or closed the popup.
+                            this.Hide();
+                            stoprunning(); // Now it's correct to call this to log out and shut down hardware.
+                            var login = new Login.LoginForm();
+                            login.Show();
+                        }
+
+                        
                     }
                 }
             }
@@ -397,8 +403,8 @@ namespace NV22SpectralInteg.Dashboard
             Logger.Log("CreateNotesTable called.");
 
             grandTotal = 0;
-            var counts = _validator?.NoteEscrowCounts ?? new Dictionary<string, int>();
-            //var counts = testCounts;
+            //var counts = _validator?.NoteEscrowCounts ?? new Dictionary<string, int>();
+            var counts = testCounts;
             Logger.Log($"Counts loaded. Total denominations: {counts.Count}");
 
             notesTable = new TableLayoutPanel
@@ -523,8 +529,8 @@ namespace NV22SpectralInteg.Dashboard
 
         private void ToggleDataView()
         {
-            var hasData = _validator?.NoteEscrowCounts.Any() ?? false;
-            //var hasData = testCounts.Any();
+            //var hasData = _validator?.NoteEscrowCounts.Any() ?? false;
+            var hasData = testCounts.Any();
 
             // This part is the same, it ensures the correct controls are set to visible/invisible.
             addAmountLabel.Visible = !hasData;
@@ -625,7 +631,6 @@ namespace NV22SpectralInteg.Dashboard
             }
             return ports;
         }
-
         private void Dashboard_Load(object sender, EventArgs e)
         {
             try
@@ -660,22 +665,22 @@ namespace NV22SpectralInteg.Dashboard
                 // If a matching port was found, set it globally and connect
                 //if (targetComPort != null)
                 //{
-                    Logger.Log("✅ Device found. Proceeding with automatic connection.");
+                Logger.Log("✅ Device found. Proceeding with automatic connection.");
 
-                    // --- AUTOMATICALLY SET GLOBALS AND CONNECT ---
-                    //Global.ComPort = targetComPort;
-                    //Global.SSPAddress = Byte.Parse("0");
+                // --- AUTOMATICALLY SET GLOBALS AND CONNECT ---
+                //Global.ComPort = targetComPort;
+                //Global.SSPAddress = Byte.Parse("0");
 
-                    Logger.Log("✅ Validator instance created successfully.");
+                Logger.Log("✅ Validator instance created successfully.");
 
-                    // 🔹 SUBSCRIBE TO THE VALIDATOR'S EVENT
-                    _validator.NoteEscrowUpdated += Validator_NoteEscrowUpdated;
+                // 🔹 SUBSCRIBE TO THE VALIDATOR'S EVENT
+                _validator.NoteEscrowUpdated += Validator_NoteEscrowUpdated;
 
-                    // Update UI to show what happened
-                    //comboBoxComPorts.Items.Clear();
-                    //comboBoxComPorts.Items.Add($"{targetComPort} - Auto-Connecting...");
-                    //comboBoxComPorts.SelectedIndex = 0;
-                    //comboBoxComPorts.Enabled = false;
+                // Update UI to show what happened
+                //comboBoxComPorts.Items.Clear();
+                //comboBoxComPorts.Items.Add($"{targetComPort} - Auto-Connecting...");
+                //comboBoxComPorts.SelectedIndex = 0;
+                //comboBoxComPorts.Enabled = false;
                 //}
                 //else
                 //{

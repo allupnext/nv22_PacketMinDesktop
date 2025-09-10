@@ -11,8 +11,9 @@ namespace NV22SpectralInteg.Services;
 public static class ApiService
 {
     private static readonly HttpClient client = new HttpClient();
-    private const string BaseUrl = "https://uat.pocketmint.ai/api/kiosks";
+    internal const string BaseUrl = "https://uat.pocketmint.ai/api/kiosks";
     internal const string AuthToken = "a55cf4p6-e57a-3w20-8ag4-33s55d27ev78";
+    private const string mode = "development";
 
     static ApiService()
     {
@@ -22,7 +23,7 @@ public static class ApiService
         client.DefaultRequestHeaders.UserAgent.ParseAdd("PocketMint-KioskApp/1.0");
         client.DefaultRequestHeaders.Add("Authorization", AuthToken);
     }
-    
+
     // NOTE: This is a simplified example. In a real app, you would have proper response models
     // instead of 'dynamic' to ensure type safety.
 
@@ -63,135 +64,85 @@ public static class ApiService
     public static async Task<bool> SendOtpAsync(string mobileNo)
     {
         // For demonstration, returning true. Uncomment your real logic here.
-
-        string apiUrl = $"{BaseUrl}/send/user/mobileno/otp";
-        try
+        if (mode != "development")
         {
-            var payload = new { mobileNo, kioskId = int.Parse(AppSession.KioskId) };
-            string jsonPayload = JsonConvert.SerializeObject(payload);
-            var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
-            HttpResponseMessage response = await client.PostAsync(apiUrl, content);
-            string responseText = await response.Content.ReadAsStringAsync();
-
-            var result = JsonConvert.DeserializeObject<dynamic>(responseText);
-            if (result != null && result.isSucceed == true)
+            string apiUrl = $"{BaseUrl}/send/user/mobileno/otp";
+            try
             {
-                AppSession.smsId = result.smsId;
-                return true;
-            }
-            return false;
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError("Exception in SendOtpAsync", ex);
-            return false;
-        }
+                var payload = new { mobileNo, kioskId = int.Parse(AppSession.KioskId) };
+                string jsonPayload = JsonConvert.SerializeObject(payload);
+                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
-        return await Task.FromResult(true); // Mock success
+                HttpResponseMessage response = await client.PostAsync(apiUrl, content);
+                string responseText = await response.Content.ReadAsStringAsync();
+
+                var result = JsonConvert.DeserializeObject<dynamic>(responseText);
+                if (result != null && result.isSucceed == true)
+                {
+                    AppSession.smsId = result.smsId;
+                    return true;
+                }
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("Exception in SendOtpAsync", ex);
+                return false;
+            }
+
+            return await Task.FromResult(true); // Mock success
+        }
+        else
+        {
+            return true;
+        }
     }
 
     public static async Task<bool> VerifyOtpAsync(string mobileNo, string otp)
     {
         // For demonstration, returning true. Uncomment your real logic here.
 
-        string apiUrl = $"{BaseUrl}/validate/user/mobileno/otp";
-        try
+        if (mode != "development")
         {
-            var payload = new
+            string apiUrl = $"{BaseUrl}/validate/user/mobileno/otp";
+            try
             {
-                mobileNo,
-                kioskId = int.Parse(AppSession.KioskId),
-                otp,
-                smsId = AppSession.smsId
-            };
-            string jsonPayload = JsonConvert.SerializeObject(payload);
-            var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
-
-            HttpResponseMessage response = await client.PostAsync(apiUrl, content);
-            string responseText = await response.Content.ReadAsStringAsync();
-
-            var result = JsonConvert.DeserializeObject<dynamic>(responseText);
-            if (result != null && result.isSucceed == true && result.data != null)
-            {
-                AppSession.CustomerRegId = result.data.REGID;
-                AppSession.CustomerName = result.data.NAME;
-                AppSession.CustomerBALANCE = result.data.BALANCE;
-                return true;
-            }
-            return false;
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError("Exception in VerifyOtpAsync", ex);
-            return false;
-        }
-
-        return await Task.FromResult(true); // Mock success
-    }
-
-
-    public static async Task<(bool Success, string Message, dynamic Result)> PersistTransactionAsync(Dictionary<string, int> noteEscrowCounts, int grandTotal)
-    {
-        string apiUrl = $"{BaseUrl}/user/transaction/persist";
-
-        try
-        {
-            var amountDetails = noteEscrowCounts
-                .Select(kvp =>
+                var payload = new
                 {
-                    string key = kvp.Key;
-                    int count = kvp.Value;
-                    var denominationMatch = System.Text.RegularExpressions.Regex.Match(key, @"\d+");
-                    int denomination = denominationMatch.Success && int.TryParse(denominationMatch.Value, out var d) ? d : 0;
-                    return new { denomination, count, total = denomination * count };
-                })
-                .ToList();
+                    mobileNo,
+                    kioskId = int.Parse(AppSession.KioskId),
+                    otp,
+                    smsId = AppSession.smsId
+                };
+                string jsonPayload = JsonConvert.SerializeObject(payload);
+                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
-            var requestBody = new
+                HttpResponseMessage response = await client.PostAsync(apiUrl, content);
+                string responseText = await response.Content.ReadAsStringAsync();
+
+                var result = JsonConvert.DeserializeObject<dynamic>(responseText);
+                if (result != null && result.isSucceed == true && result.data != null)
+                {
+                    AppSession.CustomerRegId = result.data.REGID;
+                    AppSession.CustomerName = result.data.NAME;
+                    AppSession.CustomerBALANCE = result.data.BALANCE;
+                    return true;
+                }
+                return false;
+            }
+            catch (Exception ex)
             {
-                kioskId = AppSession.KioskId,
-                kioskRegId = AppSession.KioskRegId,
-                customerRegId = AppSession.CustomerRegId,
-                kioskTotalAmount = grandTotal,
-                amountDetails = amountDetails
-            };
-
-            string jsonPayload = JsonConvert.SerializeObject(requestBody);
-            var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
-
-            Logger.Log("📤 Sending transaction request to API...");
-            Logger.Log($"📦 Payload: {jsonPayload}");
-
-            HttpResponseMessage response = await client.PostAsync(apiUrl, content);
-            string responseText = await response.Content.ReadAsStringAsync();
-
-            Logger.Log($"📬 API Response: {responseText}");
-
-            var result = JsonConvert.DeserializeObject<dynamic>(responseText);
-            if (result == null)
-            {
-                return (false, "API returned null response.", null);
+                Logger.LogError("Exception in VerifyOtpAsync", ex);
+                return false;
             }
 
-            if (result.isSucceed == true)
-            {
-                return (true, null, result);
-            }
-            else
-            {
-                return (false, (string)result.message, result);
-            }
+            return await Task.FromResult(true); // Mock success
         }
-        catch (Exception ex)
+        else
         {
-            Logger.LogError("🚨 Error in PersistTransactionAsync", ex);
-            return (false, $"Exception: {ex.Message}", null);
+            return true;
         }
     }
-
-
-
-
 
 }

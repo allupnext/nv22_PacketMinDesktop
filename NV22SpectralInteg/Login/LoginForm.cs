@@ -53,6 +53,7 @@ namespace NV22SpectralInteg.Login
             InitializeCountryCodes();
             InitializeKioskUI();
             InitializeLoginUI();
+            //this.FormBorderStyle = FormBorderStyle.Sizable; // Removes the title bar and border
 
             this.validator = new CValidator();
             this.Shown += LoginForm_Shown;
@@ -524,9 +525,10 @@ namespace NV22SpectralInteg.Login
                 countdownTimer.Stop();
                 Logger.Log($"Login successful ✅ User: {AppSession.CustomerName}, Balance: {AppSession.CustomerBALANCE}💰");
                 Logger.LogNewUserStart($"{AppSession.CustomerName}");
-                this.Hide();
-
                 var dashboard = new NV22SpectralInteg.Dashboard.Dashboard(this.validator);
+
+                dashboard.Show();
+                this.Hide();
                 dashboard.Shown += (s, args) =>
                 {
                     try
@@ -538,14 +540,14 @@ namespace NV22SpectralInteg.Login
                         if (result != DialogResult.OK)
                         {
                             Logger.Log("Privacy Policy not accepted ❌ Returning to login");
-                            dashboard.Close();
                             this.ResetToLogin();
                             this.Show();
+                            dashboard.Close();
                         }
                         else
                         {
                             Logger.Log("Privacy Policy accepted ✅");
-                            Global.ComPort = "COM7";
+                            Global.ComPort = "COM8";
                             dashboard.MainLoop();
                         }
                     }
@@ -558,7 +560,6 @@ namespace NV22SpectralInteg.Login
                         this.Show();
                     }
                 };
-                dashboard.Show();
             }
             else
             {
