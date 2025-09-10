@@ -114,20 +114,21 @@ namespace NV22SpectralInteg.Dashboard
                 BackColor = Color.White,
                 TextAlign = ContentAlignment.MiddleCenter,
                 Height = 80,
-                Location = new Point(20, nameLabel.Bottom + 10),
+                Location = new Point(20, nameLabel.Bottom - 10),
             };
 
             // Receipt Info Message
             Label infoLabel = new Label
             {
-                Text = "Transaction completed. \nReceipt has been sent to your registered Mobile number.",
+                Text = "Transaction completed.\nReceipt has been sent to your registered \nMobile number.",
                 Font = new Font("Poppins", 9F, FontStyle.Regular),
                 ForeColor = ColorTranslator.FromHtml("#7e8088"),
                 BackColor = Color.White,
-                AutoSize = true,
-                Size = new Size(this.ClientSize.Width - 60, 75),
+                AutoSize = false,
+                Width = this.ClientSize.Width - 60, 
+                Height = 90,
                 TextAlign = ContentAlignment.MiddleCenter,
-                Location = new Point(30, amountLabel.Bottom + 10)
+                Location = new Point((this.ClientSize.Width - (this.ClientSize.Width - 60)) / 2, amountLabel.Bottom + 10)
             };
 
             // 'Add New' Button
