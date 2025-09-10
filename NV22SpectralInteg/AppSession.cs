@@ -11,9 +11,9 @@ namespace NV22SpectralInteg
         public static string KioskId { get; set; } = null;
         public static string KioskRegId { get; set; } = null;
         public static string CustomerRegId { get; set; } = null;
-        public static string CustomerName { get; set; } = null;
+        public static string CustomerName { get; set; } = "None";
         public static string CustomerMobile { get; set; } = null;
-        public static decimal CustomerBALANCE { get; set; }
+        public static decimal? CustomerBALANCE { get; set; } = 0.00m;
         public static string smsId { get; set; } = null;
 
     }

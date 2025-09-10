@@ -17,8 +17,8 @@ namespace NV22SpectralInteg
 
             // Make the form transparent and borderless
             this.FormBorderStyle = FormBorderStyle.None;
-            this.BackColor = Color.LimeGreen; // Using a standard color name
-            this.TransparencyKey = Color.LimeGreen;
+            this.BackColor = ColorTranslator.FromHtml("#25c866"); ; // Using a standard color name
+            //this.TransparencyKey = Color.LimeGreen;
 
             // Set size and position to cover the entire screen
             this.WindowState = FormWindowState.Maximized;

@@ -53,7 +53,7 @@ namespace NV22SpectralInteg.Dashboard
             timer1.Interval = pollTimer;
             reconnectionTimer.Tick += new EventHandler(reconnectionTimer_Tick);
 
-            UpdateNotesDisplay();
+            //UpdateNotesDisplay();
         }
 
         private void reconnectionTimer_Tick(object sender, EventArgs e)
@@ -180,7 +180,7 @@ namespace NV22SpectralInteg.Dashboard
 
                 welcomeTextLabel.Location = new Point((headerPanel.Width - welcomeTextLabel.Width) / 2, titleImage.Bottom + 10);
 
-                customerNameLabel.Location = new Point((headerPanel.Width - customerNameLabel.Width) / 2, welcomeTextLabel.Bottom - 20);
+                customerNameLabel.Location = new Point((headerPanel.Width - customerNameLabel.Width) / 2, welcomeTextLabel.Bottom - 10);
 
                 balanceSubTextLabel.Location = new Point((headerPanel.Width - balanceSubTextLabel.Width) / 2, customerNameLabel.Bottom);
 
@@ -275,31 +275,31 @@ namespace NV22SpectralInteg.Dashboard
 
                     int kioskTotalAmount = amountDetails.Sum(a => a.total);
 
-                    //var requestBody = new
-                    //{
-                    //    kioskId = AppSession.KioskId,
-                    //    kioskRegId = AppSession.KioskRegId,
-                    //    customerRegId = AppSession.CustomerRegId,
-                    //    kioskTotalAmount = kioskTotalAmount,
-                    //    amountDetails = amountDetails
-                    //};
-
                     var requestBody = new
                     {
                         kioskId = AppSession.KioskId,
                         kioskRegId = AppSession.KioskRegId,
                         customerRegId = AppSession.CustomerRegId,
-                        kioskTotalAmount = 0,
-                        amountDetails = new[]
-                        {
-                            new
-                            {
-                                denomination = 0,
-                                count = 0,
-                                total = 0
-                            }
-                        }
+                        kioskTotalAmount = kioskTotalAmount,
+                        amountDetails = amountDetails
                     };
+
+                    //var requestBody = new
+                    //{
+                    //    kioskId = AppSession.KioskId,
+                    //    kioskRegId = AppSession.KioskRegId,
+                    //    customerRegId = AppSession.CustomerRegId,
+                    //    kioskTotalAmount = 0,
+                    //    amountDetails = new[]
+                    //    {
+                    //        new
+                    //        {
+                    //            denomination = 0,
+                    //            count = 0,
+                    //            total = 0
+                    //        }
+                    //    }
+                    //};
 
 
                     Logger.Log("📤 Sending transaction request to API...");
@@ -403,8 +403,8 @@ namespace NV22SpectralInteg.Dashboard
             Logger.Log("CreateNotesTable called.");
 
             grandTotal = 0;
-            //var counts = _validator?.NoteEscrowCounts ?? new Dictionary<string, int>();
-            var counts = testCounts;
+            var counts = _validator?.NoteEscrowCounts ?? new Dictionary<string, int>();
+            //var counts = testCounts;
             Logger.Log($"Counts loaded. Total denominations: {counts.Count}");
 
             notesTable = new TableLayoutPanel
@@ -482,9 +482,9 @@ namespace NV22SpectralInteg.Dashboard
             Label label = new Label
             {
                 Text = text,
-                ForeColor = Color.White,
+                ForeColor = header ? Color.White : ColorTranslator.FromHtml("#212529"),
                 Font = new Font("Poppins", 14, header ? FontStyle.Bold : FontStyle.Regular),
-                BackColor = header ? Color.FromArgb(60, 60, 60) : Color.FromArgb(45, 45, 45),
+                BackColor = header ? ColorTranslator.FromHtml("#212529") : ColorTranslator.FromHtml("#FFF"),
                 Dock = DockStyle.Fill,
                 MinimumSize = new Size(0, 40),
                 Margin = new Padding(0), // Use Margin 0 for perfect borders
@@ -529,8 +529,8 @@ namespace NV22SpectralInteg.Dashboard
 
         private void ToggleDataView()
         {
-            //var hasData = _validator?.NoteEscrowCounts.Any() ?? false;
-            var hasData = testCounts.Any();
+            var hasData = _validator?.NoteEscrowCounts.Any() ?? false;
+            //var hasData = testCounts.Any();
 
             // This part is the same, it ensures the correct controls are set to visible/invisible.
             addAmountLabel.Visible = !hasData;

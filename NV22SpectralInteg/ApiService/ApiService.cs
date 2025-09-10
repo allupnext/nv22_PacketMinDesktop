@@ -13,7 +13,7 @@ public static class ApiService
     private static readonly HttpClient client = new HttpClient();
     internal const string BaseUrl = "https://uat.pocketmint.ai/api/kiosks";
     internal const string AuthToken = "a55cf4p6-e57a-3w20-8ag4-33s55d27ev78";
-    private const string mode = "development";
+    private const string mode = "live";
 
     static ApiService()
     {
@@ -29,35 +29,42 @@ public static class ApiService
 
     public static async Task<(bool Success, string ErrorMessage)> ValidateAndSetKioskSessionAsync(string kioskId)
     {
-        string apiUrl = $"{BaseUrl}/get/kiosks/details";
-        try
+        if(mode != "development")
         {
-            var requestBody = new { kioskId = int.Parse(kioskId) };
-            string jsonPayload = JsonConvert.SerializeObject(requestBody);
-            var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
-
-            HttpResponseMessage response = await client.PostAsync(apiUrl, content);
-            string responseText = await response.Content.ReadAsStringAsync();
-
-            if (!response.IsSuccessStatusCode)
+            string apiUrl = $"{BaseUrl}/get/kiosks/details";
+            try
             {
-                return (false, $"API Error: {response.StatusCode}");
-            }
+                var requestBody = new { kioskId = int.Parse(kioskId) };
+                string jsonPayload = JsonConvert.SerializeObject(requestBody);
+                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
-            var result = JsonConvert.DeserializeObject<dynamic>(responseText);
-            if (result == null || result.isSucceed != true || result.data == null)
+                HttpResponseMessage response = await client.PostAsync(apiUrl, content);
+                string responseText = await response.Content.ReadAsStringAsync();
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    return (false, $"API Error: {response.StatusCode}");
+                }
+
+                var result = JsonConvert.DeserializeObject<dynamic>(responseText);
+                if (result == null || result.isSucceed != true || result.data == null)
+                {
+                    return (false, "Invalid Kiosk ID or API response.");
+                }
+
+                AppSession.KioskId = result.data.KIOSKID;
+                AppSession.KioskRegId = result.data.REGID;
+                return (true, null);
+            }
+            catch (Exception ex)
             {
-                return (false, "Invalid Kiosk ID or API response.");
+                Logger.LogError("Error validating Kiosk ID", ex);
+                return (false, $"Exception: {ex.Message}");
             }
-
-            AppSession.KioskId = result.data.KIOSKID;
-            AppSession.KioskRegId = result.data.REGID;
-            return (true, null);
         }
-        catch (Exception ex)
+        else
         {
-            Logger.LogError("Error validating Kiosk ID", ex);
-            return (false, $"Exception: {ex.Message}");
+            return (true, null);
         }
     }
 

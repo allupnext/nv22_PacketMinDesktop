@@ -75,9 +75,9 @@ namespace NV22SpectralInteg.Login
         internal void InitializeLoginUI()
         {
             this.Text = "Login";
+            this.BackColor = ColorTranslator.FromHtml("#11150f");
             this.WindowState = FormWindowState.Maximized;
             this.FormBorderStyle = FormBorderStyle.None;
-            this.BackColor = ColorTranslator.FromHtml("#0a0a0a");
             this.StartPosition = FormStartPosition.CenterScreen;
 
             if (isDevelopment)
@@ -255,11 +255,28 @@ namespace NV22SpectralInteg.Login
             phonePanel.Controls.Add(phonePrefix);
             stackPanel.Controls.Add(phonePanel);
 
+            // --- Dynamically calculate and set vertical padding ---
+
+            // 1. Measure the height of the text using the textbox's font
+            int textHeight = TextRenderer.MeasureText("0", phoneTextBox.Font).Height;
+
+            // 2. Get the available height inside the container
+            int containerHeight = phoneTextContainer.ClientSize.Height;
+
+            // 3. Calculate the required top padding to center the text
+            int topPadding = (containerHeight - textHeight) / 2;
+
+            // 4. Apply the new, calculated padding
+            if (topPadding > 0)
+            {
+                phoneTextContainer.Padding = new Padding(10, topPadding, 10, 0);
+            }
+
             loginButton = new Button
             {
                 Name = "loginButton",
                 Text = "Login",
-                BackColor = ColorTranslator.FromHtml("#00C853"),
+                BackColor = ColorTranslator.FromHtml("#25c866"),
                 ForeColor = Color.White,
                 Font = new Font("Poppins", 18, FontStyle.Bold),
                 FlatStyle = FlatStyle.Flat,
@@ -269,13 +286,26 @@ namespace NV22SpectralInteg.Login
                 Margin = new Padding(0, 20, 0, 10)
             };
             loginButton.FlatAppearance.BorderSize = 0;
+            loginButton.FlatAppearance.MouseOverBackColor = Color.White;
+            loginButton.FlatAppearance.MouseDownBackColor = Color.White;
             loginButton.Region = Region.FromHrgn(
                 NativeMethods.CreateRoundRectRgn(0, 0, loginButton.Width, loginButton.Height, 12, 12)
             );
             loginButton.Click += LoginButton_Click;
-            loginButton.MouseEnter += (s, e) => loginButton.BackColor = ColorTranslator.FromHtml("#00E676");
-            loginButton.MouseLeave += (s, e) => loginButton.BackColor = ColorTranslator.FromHtml("#00C853");
             stackPanel.Controls.Add(loginButton);
+
+            // AddButton hover events
+            loginButton.MouseEnter += (sender, e) =>
+            {
+                loginButton.ForeColor = ColorTranslator.FromHtml("#25c866");
+                loginButton.Invalidate(); // Trigger panel's Paint event to draw border
+            };
+            loginButton.MouseLeave += (sender, e) =>
+            {
+                loginButton.ForeColor = Color.White;
+                loginButton.Invalidate(); // Trigger panel's Paint event to remove border
+            };
+
 
             // ------------------------------------
             // OTP Verification Section (Initially Hidden)
@@ -313,14 +343,14 @@ namespace NV22SpectralInteg.Login
                 var otpBoxContainer = new Panel
                 {
                     Width = 60,
-                    Height = 60,
+                    Height = 45,
                     Margin = new Padding(15, 5, 15, 5), 
                     BackColor = Color.Gray,
                     Padding = new Padding(1)
                 };
 
                 var otpTextBox = new TextBox
-                {
+                {   
                     MaxLength = 1,
                     Font = new Font("Poppins", 14, FontStyle.Bold),
                     TextAlign = HorizontalAlignment.Center,
@@ -328,7 +358,7 @@ namespace NV22SpectralInteg.Login
                     ForeColor = Color.White,
                     BorderStyle = BorderStyle.None,
                     Dock = DockStyle.Fill,
-                    Tag = i
+                    Tag = i,
                 };
 
                 otpTextBox.TextChanged += OtpTextBox_TextChanged;
@@ -418,12 +448,23 @@ namespace NV22SpectralInteg.Login
                 Visible = false
             };
             verifyButton.FlatAppearance.BorderSize = 0;
+            verifyButton.FlatAppearance.MouseOverBackColor = Color.White;
+            verifyButton.FlatAppearance.MouseDownBackColor = Color.White;
             verifyButton.Region = Region.FromHrgn(
-                NativeMethods.CreateRoundRectRgn(0, 0, verifyButton.Width, verifyButton.Height, 12, 12)
+               NativeMethods.CreateRoundRectRgn(0, 0, verifyButton.Width, verifyButton.Height, 12, 12)
             );
+
             verifyButton.Click += VerifyButton_Click;
-            verifyButton.MouseEnter += (s, e) => verifyButton.BackColor = ColorTranslator.FromHtml("#00E676");
-            verifyButton.MouseLeave += (s, e) => verifyButton.BackColor = ColorTranslator.FromHtml("#00C853");
+            // AddButton hover events
+            verifyButton.MouseEnter += (sender, e) =>
+            {
+                verifyButton.ForeColor = ColorTranslator.FromHtml("#25c866");
+            };
+
+            verifyButton.MouseLeave += (sender, e) =>
+            {
+                verifyButton.ForeColor = Color.White;
+            };
             stackPanel.Controls.Add(verifyButton);
 
             var footer = new Label
@@ -547,7 +588,7 @@ namespace NV22SpectralInteg.Login
                         else
                         {
                             Logger.Log("Privacy Policy accepted ✅");
-                            Global.ComPort = "COM8";
+                            Global.ComPort = "COM7";
                             dashboard.MainLoop();
                         }
                     }
@@ -864,13 +905,29 @@ namespace NV22SpectralInteg.Login
             {
                 Text = "Submit",
                 Font = new Font("Poppins", 11, FontStyle.Bold),
-                Height = 40,
+                Width = 340,
+                Height = 65,
                 Dock = DockStyle.Fill,
-                BackColor = ColorTranslator.FromHtml("#00C853"),
+                BackColor = ColorTranslator.FromHtml("#25c866"),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat
             };
             submitBtn.FlatAppearance.BorderSize = 0;
+            submitBtn.FlatAppearance.MouseOverBackColor = Color.White;
+            submitBtn.FlatAppearance.MouseDownBackColor = Color.White;
+            submitBtn.Region = Region.FromHrgn(
+               NativeMethods.CreateRoundRectRgn(0, 0, submitBtn.Width, submitBtn.Height, 12, 12)
+            );
+            // AddButton hover events
+            submitBtn.MouseEnter += (sender, e) =>
+            {
+                submitBtn.ForeColor = ColorTranslator.FromHtml("#25c866");
+            };
+
+            submitBtn.MouseLeave += (sender, e) =>
+            {
+                submitBtn.ForeColor = Color.White;
+            };
 
             layout.Controls.Add(kioskLabel, 0, 0);
             layout.Controls.Add(kioskPanelContainer, 0, 1);
