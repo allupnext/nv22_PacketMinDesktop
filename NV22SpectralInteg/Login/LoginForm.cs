@@ -29,6 +29,7 @@ namespace NV22SpectralInteg.Login
         private ComboBox countryDropdown;
         private List<CountryCode> countryCodes;
 
+        private Panel[] otpBoxContainers; 
         private TextBox[] otpTextBoxes;
         private string fullMobileNumber;
 
@@ -140,7 +141,7 @@ namespace NV22SpectralInteg.Login
             {
                 Name = "subtitleLabel",
                 Text = "Login",
-                Font = new Font("Poppins", 20, FontStyle.Bold),
+                Font = new Font("Poppins", 24, FontStyle.Bold),
                 ForeColor = Color.White,
                 AutoSize = true
             };
@@ -177,7 +178,7 @@ namespace NV22SpectralInteg.Login
                 TextAlign = ContentAlignment.MiddleCenter,
                 BackColor = ColorTranslator.FromHtml("#454545"),
                 ForeColor = Color.White,
-                Font = new Font("Poppins", 12),
+                Font = new Font("Poppins", 16),
                 Dock = DockStyle.Left,
                 Cursor = Cursors.Hand
             };
@@ -245,7 +246,7 @@ namespace NV22SpectralInteg.Login
                 BorderStyle = BorderStyle.None,
                 BackColor = ColorTranslator.FromHtml("#222223"),
                 ForeColor = Color.White,
-                Font = new Font("Poppins", 12),
+                Font = new Font("Poppins", 16),
                 Dock = DockStyle.Fill,
                 Margin = new Padding(0)
             };
@@ -283,7 +284,7 @@ namespace NV22SpectralInteg.Login
                 Width = 460,
                 Height = 60,
                 Cursor = Cursors.Hand,
-                Margin = new Padding(0, 20, 0, 10)
+                Margin = new Padding(0, 20, 0, 0)
             };
             loginButton.FlatAppearance.BorderSize = 0;
             loginButton.FlatAppearance.MouseOverBackColor = Color.White;
@@ -324,55 +325,64 @@ namespace NV22SpectralInteg.Login
             };
             stackPanel.Controls.Add(otpLabel);
 
+            // Inside your form's constructor or load method:
             otpBoxesPanel = new FlowLayoutPanel
             {
                 FlowDirection = FlowDirection.LeftToRight,
                 WrapContents = false,
                 Width = 460,
-                Height = 60, 
-                Padding = new Padding(50, 0, 0, 0),
+                Height = 60,
+                // Adjust left padding to center the boxes
+                Padding = new Padding(40, 0, 0, 0),
                 Visible = false,
                 Margin = new Padding(0, 0, 0, 15),
-                //BackColor = Color.White
             };
             stackPanel.Controls.Add(otpBoxesPanel);
 
+            // Initialize the arrays
             otpTextBoxes = new TextBox[4];
+            otpBoxContainers = new Panel[4]; // Array to hold the panels
+
             for (int i = 0; i < 4; i++)
             {
+                // The panel's BackColor IS the border. Its size is the outer edge.
                 var otpBoxContainer = new Panel
                 {
                     Width = 60,
                     Height = 45,
-                    Margin = new Padding(15, 5, 15, 5), 
-                    BackColor = Color.Gray,
-                    Padding = new Padding(1)
+                    Margin = new Padding(15, 5, 15, 5),
+                    BackColor = Color.DimGray
                 };
 
                 var otpTextBox = new TextBox
-                {   
+                {
                     MaxLength = 1,
-                    Font = new Font("Poppins", 14, FontStyle.Bold),
+                    Font = new Font("Poppins", 20, FontStyle.Bold),
                     TextAlign = HorizontalAlignment.Center,
                     BackColor = ColorTranslator.FromHtml("#222223"),
                     ForeColor = Color.White,
                     BorderStyle = BorderStyle.None,
-                    Dock = DockStyle.Fill,
                     Tag = i,
+                    Width = 56,
+                    Location = new Point(2, 8),
                 };
 
+                otpTextBox.Enter += OtpTextBox_Enter;
+                otpTextBox.Leave += OtpTextBox_Leave;
                 otpTextBox.TextChanged += OtpTextBox_TextChanged;
                 otpTextBox.KeyDown += OtpTextBox_KeyDown;
+
                 otpBoxContainer.Controls.Add(otpTextBox);
                 otpBoxesPanel.Controls.Add(otpBoxContainer);
-                otpTextBoxes[i] = otpTextBox;
-            }
 
+                otpTextBoxes[i] = otpTextBox;
+                otpBoxContainers[i] = otpBoxContainer;
+            }
             infoLabel = new Label
             {
                 Text = "A code has been sent to your phone",
                 ForeColor = Color.LightGray,
-                Font = new Font("Poppins", 10),
+                Font = new Font("Poppins", 12),
                 AutoSize = false,
                 Width = 460,
                 Height = 30,
@@ -387,7 +397,7 @@ namespace NV22SpectralInteg.Login
                 Width = 460, // Match your stackPanel width
                 Height = 30, // Height is same as timerLabel
                 BackColor = Color.Transparent,
-                Margin = new Padding(0, 5, 0, 15) // Use a consistent margin
+                Margin = new Padding(0, 0, 0, 10) // Use a consistent margin
             };
             stackPanel.Controls.Add(timerAndResendContainer);
 
@@ -471,7 +481,7 @@ namespace NV22SpectralInteg.Login
             {
                 Text = "© PocketMint Wallet, 2025. You can visit our Privacy Policy and Terms Conditions.",
                 ForeColor = Color.Gray,
-                Font = new Font("Poppins", 8),
+                Font = new Font("Poppins", 10),
                 Width = 460,
                 AutoSize = false,
                 Height = 40,
@@ -644,6 +654,28 @@ namespace NV22SpectralInteg.Login
 
             // Recalculate the layout
             CenterLoginUI(loginPanel);
+        }
+
+        // Add these two new event handler methods to your class
+
+        private void OtpTextBox_Enter(object sender, EventArgs e)
+        {
+            TextBox currentTextBox = sender as TextBox;
+            if (currentTextBox?.Parent is Panel parentPanel)
+            {
+                // Change the border color to white when the box is active
+                parentPanel.BackColor = Color.White;
+            }
+        }
+
+        private void OtpTextBox_Leave(object sender, EventArgs e)
+        {
+            TextBox currentTextBox = sender as TextBox;
+            if (currentTextBox?.Parent is Panel parentPanel)
+            {
+                // Change the border color back to gray when the box is inactive
+                parentPanel.BackColor = Color.DimGray;
+            }
         }
 
         // Helper Methods that were missing from your snippet

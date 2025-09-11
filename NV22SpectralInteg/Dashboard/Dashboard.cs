@@ -426,7 +426,7 @@ namespace NV22SpectralInteg.Dashboard
 
             AddStyledCell(notesTable, "Note", 0, 0, header: true, alignment: ContentAlignment.MiddleCenter);
             AddStyledCell(notesTable, "Count", 1, 0, header: true, alignment: ContentAlignment.MiddleCenter);
-            AddStyledCell(notesTable, "Total", 2, 0, header: true, alignment: ContentAlignment.MiddleRight);
+            AddStyledCell(notesTable, "Total", 2, 0, header: true, alignment: ContentAlignment.MiddleCenter);
 
             int row = 1;
             if (counts.Any())
@@ -447,7 +447,7 @@ namespace NV22SpectralInteg.Dashboard
 
                     AddStyledCell(notesTable, $"{denomination} USD", 0, row, alignment: ContentAlignment.MiddleCenter);
                     AddStyledCell(notesTable, count.ToString(), 1, row, alignment: ContentAlignment.MiddleCenter);
-                    AddStyledCell(notesTable, total.ToString(), 2, row, alignment: ContentAlignment.MiddleRight);
+                    AddStyledCell(notesTable, total.ToString(), 2, row, alignment: ContentAlignment.MiddleCenter);
                     row++;
                 }
 
