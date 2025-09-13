@@ -11,6 +11,8 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using NV22SpectralInteg.Services;
+using System.Runtime.InteropServices;
+using NV22SpectralInteg.NumPad;
 
 namespace NV22SpectralInteg.Login
 {
@@ -42,7 +44,7 @@ namespace NV22SpectralInteg.Login
         private Panel phonePanel;
         private Button loginButton;
         private Label otpLabel;
-        private FlowLayoutPanel otpBoxesPanel;
+        private TableLayoutPanel otpBoxesPanel;
         private Label infoLabel;
         private Button verifyButton;
 
@@ -173,7 +175,7 @@ namespace NV22SpectralInteg.Login
             {
                 // --- NOTE: Your code correctly sets "+91". The screenshot might be from an older version. ---
                 Text = "+91",
-                Width = 60,
+                Width = 80,
                 Height = 40,
                 TextAlign = ContentAlignment.MiddleCenter,
                 BackColor = ColorTranslator.FromHtml("#454545"),
@@ -248,7 +250,19 @@ namespace NV22SpectralInteg.Login
                 ForeColor = Color.White,
                 Font = new Font("Poppins", 16),
                 Dock = DockStyle.Fill,
-                Margin = new Padding(0)
+                Margin = new Padding(0),
+                ReadOnly = true
+            };
+
+            phoneTextBox.Click += (s, e) =>
+            {
+                Point textBoxScreenLocation = phoneTextBox.PointToScreen(Point.Empty);
+                var numpad = new Numpad(phoneTextBox, "MobileNumber");
+                numpad.StartPosition = FormStartPosition.Manual;
+                int numpadX = textBoxScreenLocation.X;
+                int numpadY = textBoxScreenLocation.Y + phoneTextBox.Height + 5;
+                numpad.Location = new Point(numpadX, numpadY);
+                numpad.ShowDialog();
             };
 
             phoneTextContainer.Controls.Add(phoneTextBox);
@@ -326,18 +340,23 @@ namespace NV22SpectralInteg.Login
             stackPanel.Controls.Add(otpLabel);
 
             // Inside your form's constructor or load method:
-            otpBoxesPanel = new FlowLayoutPanel
+            // Use a TableLayoutPanel instead of FlowLayoutPanel for better control over cell sizes
+            otpBoxesPanel = new TableLayoutPanel
             {
-                FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = false,
-                Width = 460,
-                Height = 60,
-                // Adjust left padding to center the boxes
-                Padding = new Padding(40, 0, 0, 0),
-                Visible = false,
+                Dock = DockStyle.Fill, // Dock to fill the parent container
+                RowCount = 1,
+                ColumnCount = 4, // 4 columns for 4 OTP boxes
                 Margin = new Padding(0, 0, 0, 15),
+                Visible = false,
+                BackColor = Color.Transparent
             };
             stackPanel.Controls.Add(otpBoxesPanel);
+
+            // Set column styles to make them all equal width (25% each)
+            for (int i = 0; i < 4; i++)
+            {
+                otpBoxesPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
+            }
 
             // Initialize the arrays
             otpTextBoxes = new TextBox[4];
@@ -345,13 +364,13 @@ namespace NV22SpectralInteg.Login
 
             for (int i = 0; i < 4; i++)
             {
-                // The panel's BackColor IS the border. Its size is the outer edge.
                 var otpBoxContainer = new Panel
                 {
-                    Width = 60,
-                    Height = 45,
-                    Margin = new Padding(15, 5, 15, 5),
-                    BackColor = Color.DimGray
+                    // Dock the container to fill its cell in the TableLayoutPanel
+                    Dock = DockStyle.Fill,
+                    Margin = new Padding(5), // Add a margin for spacing between boxes
+                    Padding = new Padding(4), // Padding to create the border effect
+                    BackColor = Color.DimGray // This is the border color
                 };
 
                 var otpTextBox = new TextBox
@@ -363,8 +382,7 @@ namespace NV22SpectralInteg.Login
                     ForeColor = Color.White,
                     BorderStyle = BorderStyle.None,
                     Tag = i,
-                    Width = 56,
-                    Location = new Point(2, 8),
+                    Dock = DockStyle.Fill // Dock the TextBox to fill its parent container (the panel)
                 };
 
                 otpTextBox.Enter += OtpTextBox_Enter;
@@ -373,7 +391,7 @@ namespace NV22SpectralInteg.Login
                 otpTextBox.KeyDown += OtpTextBox_KeyDown;
 
                 otpBoxContainer.Controls.Add(otpTextBox);
-                otpBoxesPanel.Controls.Add(otpBoxContainer);
+                otpBoxesPanel.Controls.Add(otpBoxContainer, i, 0); // Add the container to a specific cell
 
                 otpTextBoxes[i] = otpTextBox;
                 otpBoxContainers[i] = otpBoxContainer;
@@ -666,6 +684,17 @@ namespace NV22SpectralInteg.Login
                 // Change the border color to white when the box is active
                 parentPanel.BackColor = Color.White;
             }
+
+            currentTextBox.Click += (s, e) =>
+            {
+                Point textBoxScreenLocation = currentTextBox.PointToScreen(Point.Empty);
+                var numpad = new Numpad(currentTextBox, "OTPNumber");
+                numpad.StartPosition = FormStartPosition.Manual;
+                int numpadX = textBoxScreenLocation.X;
+                int numpadY = textBoxScreenLocation.Y + currentTextBox.Height + 5;
+                numpad.Location = new Point(numpadX, numpadY);
+                numpad.ShowDialog();
+            };
         }
 
         private void OtpTextBox_Leave(object sender, EventArgs e)
@@ -928,6 +957,18 @@ namespace NV22SpectralInteg.Login
                 BackColor = ColorTranslator.FromHtml("#222223"),
                 ForeColor = Color.White,
                 Margin = new Padding(0),
+                ReadOnly = true
+            };
+
+            kioskTextBox.Click += (s, e) =>
+            {
+                Point textBoxScreenLocation = kioskTextBox.PointToScreen(Point.Empty);
+                var numpad = new Numpad(kioskTextBox, "KioskNumber");
+                numpad.StartPosition = FormStartPosition.Manual;
+                int numpadX = textBoxScreenLocation.X;
+                int numpadY = textBoxScreenLocation.Y + kioskTextBox.Height + 5;
+                numpad.Location = new Point(numpadX, numpadY);
+                numpad.ShowDialog();
             };
 
             kioskTextContainer.Controls.Add(kioskTextBox);
@@ -1048,6 +1089,9 @@ namespace NV22SpectralInteg.Login
         public static extern IntPtr CreateRoundRectRgn(
             int nLeftRect, int nTopRect, int nRightRect, int nBottomRect,
             int nWidthEllipse, int nHeightEllipse);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        internal static extern bool HideCaret(IntPtr hWnd);
     }
 }
 

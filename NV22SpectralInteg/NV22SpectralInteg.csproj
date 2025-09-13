@@ -9,6 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Folder Include="Login\" />
     <Folder Include="Resources\" />
   </ItemGroup>
 
