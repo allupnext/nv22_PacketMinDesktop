@@ -21,12 +21,6 @@
         }
         "Entry"
         {
-        "MsmKey" = "8:_1B052070DA624EBBB1F0851994B2F40A"
-        "OwnerKey" = "8:_UNDEFINED"
-        "MsmSig" = "8:_UNDEFINED"
-        }
-        "Entry"
-        {
         "MsmKey" = "8:_3BC04E0047824E44B68A31DC30779BB3"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
@@ -45,25 +39,25 @@
         }
         "Entry"
         {
-        "MsmKey" = "8:_45246634592241AFBAE0D396E681A800"
-        "OwnerKey" = "8:_UNDEFINED"
-        "MsmSig" = "8:_UNDEFINED"
-        }
-        "Entry"
-        {
         "MsmKey" = "8:_605B2FA97E0E4AF4A5A2F8CB64A652C7"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
         }
         "Entry"
         {
-        "MsmKey" = "8:_B929F9E91CD04BD8AE25CFBD905FD6C3"
+        "MsmKey" = "8:_78DCBF2A42B549BB891B897EA01C371E"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
         }
         "Entry"
         {
-        "MsmKey" = "8:_DC32716B36864C3D9CE1B50A4023610D"
+        "MsmKey" = "8:_9825010256744BE4AC1E18956A5FCBE9"
+        "OwnerKey" = "8:_UNDEFINED"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
+        "MsmKey" = "8:_B929F9E91CD04BD8AE25CFBD905FD6C3"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
         }
@@ -136,6 +130,14 @@
             "PrerequisitesLocation" = "2:1"
             "Url" = "8:"
             "ComponentsUrl" = "8:"
+                "Items"
+                {
+                    "{EDC2488A-8267-493A-A98E-7D9C3B36CDF3}:.NETFramework,Version=v4.7.2"
+                    {
+                    "Name" = "8:Microsoft .NET Framework 4.7.2 (x86 and x64)"
+                    "ProductCode" = "8:.NETFramework,Version=v4.7.2"
+                    }
+                }
             }
         }
     }
@@ -180,26 +182,6 @@
             {
             "SourcePath" = "8:..\\NV22SpectralInteg\\Image\\Logo.png"
             "TargetName" = "8:Logo.png"
-            "Tag" = "8:"
-            "Folder" = "8:_52627CB538574D92AB97197D8EF1CAA1"
-            "Condition" = "8:"
-            "Transitive" = "11:FALSE"
-            "Vital" = "11:TRUE"
-            "ReadOnly" = "11:FALSE"
-            "Hidden" = "11:FALSE"
-            "System" = "11:FALSE"
-            "Permanent" = "11:FALSE"
-            "SharedLegacy" = "11:FALSE"
-            "PackageAs" = "3:1"
-            "Register" = "3:1"
-            "Exclude" = "11:FALSE"
-            "IsDependency" = "11:FALSE"
-            "IsolateTo" = "8:"
-            }
-            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_1B052070DA624EBBB1F0851994B2F40A"
-            {
-            "SourcePath" = "8:..\\NV22SpectralInteg\\Image\\PocketMint_Logo.png"
-            "TargetName" = "8:PocketMint_Logo.png"
             "Tag" = "8:"
             "Folder" = "8:_52627CB538574D92AB97197D8EF1CAA1"
             "Condition" = "8:"
@@ -276,26 +258,6 @@
             "IsDependency" = "11:FALSE"
             "IsolateTo" = "8:"
             }
-            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_45246634592241AFBAE0D396E681A800"
-            {
-            "SourcePath" = "8:..\\NV22SpectralInteg\\Image\\paper_plane_icon.png"
-            "TargetName" = "8:paper_plane_icon.png"
-            "Tag" = "8:"
-            "Folder" = "8:_52627CB538574D92AB97197D8EF1CAA1"
-            "Condition" = "8:"
-            "Transitive" = "11:FALSE"
-            "Vital" = "11:TRUE"
-            "ReadOnly" = "11:FALSE"
-            "Hidden" = "11:FALSE"
-            "System" = "11:FALSE"
-            "Permanent" = "11:FALSE"
-            "SharedLegacy" = "11:FALSE"
-            "PackageAs" = "3:1"
-            "Register" = "3:1"
-            "Exclude" = "11:FALSE"
-            "IsDependency" = "11:FALSE"
-            "IsolateTo" = "8:"
-            }
             "{9F6F8455-1EF1-4B85-886A-4223BCC8E7F7}:_605B2FA97E0E4AF4A5A2F8CB64A652C7"
             {
             "AssemblyRegister" = "3:1"
@@ -327,10 +289,30 @@
             "IsDependency" = "11:FALSE"
             "IsolateTo" = "8:"
             }
-            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_DC32716B36864C3D9CE1B50A4023610D"
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_78DCBF2A42B549BB891B897EA01C371E"
             {
-            "SourcePath" = "8:C:\\Users\\Lenovo\\Downloads\\MyIcon.ico"
-            "TargetName" = "8:MyIcon.ico"
+            "SourcePath" = "8:..\\NV22SpectralInteg\\Image\\-PocketMint.png"
+            "TargetName" = "8:-PocketMint.png"
+            "Tag" = "8:"
+            "Folder" = "8:_52627CB538574D92AB97197D8EF1CAA1"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:FALSE"
+            "IsDependency" = "11:FALSE"
+            "IsolateTo" = "8:"
+            }
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_9825010256744BE4AC1E18956A5FCBE9"
+            {
+            "SourcePath" = "8:..\\NV22SpectralInteg\\Image\\Logo.ico"
+            "TargetName" = "8:Logo.ico"
             "Tag" = "8:"
             "Folder" = "8:_DCF1E7A5B5044B1A8A4FBFA66D7C0F9C"
             "Condition" = "8:"
@@ -566,9 +548,9 @@
         }
         "Shortcut"
         {
-            "{970C0BB2-C7D0-45D7-ABFA-7EC378858BC0}:_04EB8C67B3B54B75B988A5FFF50535E0"
+            "{970C0BB2-C7D0-45D7-ABFA-7EC378858BC0}:_564D0C01523F44969EECEC5AB058E964"
             {
-            "Name" = "8:eSSP_example_V1"
+            "Name" = "8:PocketMint"
             "Arguments" = "8:"
             "Description" = "8:"
             "ShowCmd" = "3:1"
@@ -577,12 +559,12 @@
             "Target" = "8:_B929F9E91CD04BD8AE25CFBD905FD6C3"
             "Folder" = "8:_F1FF1E0F61F04990B1D76198CA064EA6"
             "WorkingFolder" = "8:_DCF1E7A5B5044B1A8A4FBFA66D7C0F9C"
-            "Icon" = "8:_DC32716B36864C3D9CE1B50A4023610D"
+            "Icon" = "8:_9825010256744BE4AC1E18956A5FCBE9"
             "Feature" = "8:"
             }
-            "{970C0BB2-C7D0-45D7-ABFA-7EC378858BC0}:_9070AB3C99B24D0AA4A891A96B1638A4"
+            "{970C0BB2-C7D0-45D7-ABFA-7EC378858BC0}:_9C322D9D14BB4A87BEC4A32EF3353F01"
             {
-            "Name" = "8:eSSP_example_V1"
+            "Name" = "8:PocketMint"
             "Arguments" = "8:"
             "Description" = "8:"
             "ShowCmd" = "3:1"
@@ -591,7 +573,7 @@
             "Target" = "8:_B929F9E91CD04BD8AE25CFBD905FD6C3"
             "Folder" = "8:_8E57E98B55A5439D9AFC2EAEC14301CB"
             "WorkingFolder" = "8:_DCF1E7A5B5044B1A8A4FBFA66D7C0F9C"
-            "Icon" = "8:_DC32716B36864C3D9CE1B50A4023610D"
+            "Icon" = "8:_9825010256744BE4AC1E18956A5FCBE9"
             "Feature" = "8:"
             }
         }
