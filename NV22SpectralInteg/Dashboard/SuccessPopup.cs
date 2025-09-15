@@ -89,7 +89,7 @@ namespace NV22SpectralInteg.Dashboard
                 BackColor = Color.White,
                 Size = new Size(this.ClientSize.Width - 40, 60),
                 TextAlign = ContentAlignment.TopCenter,
-                Location = new Point(20, logo.Bottom - 10)
+                Location = new Point(20, logo.Bottom - 5)
             };
 
             // Recipient Name Label

@@ -8,27 +8,39 @@ namespace NV22SpectralInteg.NumPad
     {
         private TextBox targetTextBox;
         private string targetName;
+        private TextBox[] otpBoxes;
+        private int currentIndex;
 
-        public Numpad(TextBox target, string targetName = "")
+        public Numpad(TextBox target, string targetName = "", TextBox[] otpBoxes = null, int currentIndex = -1)
         {
             InitializeComponent();
+
             this.targetTextBox = target;
+
             this.targetName = targetName;
+            this.otpBoxes = otpBoxes;
+            this.currentIndex = currentIndex;
 
             CustomizeForm();
             BuildNumpadUI(targetName);
         }
-
-
+        public void SetTarget(TextBox newTarget, string newName, TextBox[] newOtpBoxes = null, int newCurrentIndex = -1)
+        {
+            this.targetTextBox = newTarget;
+            this.targetName = newName;
+            this.otpBoxes = newOtpBoxes;
+            this.currentIndex = newCurrentIndex;
+        }
 
         private void CustomizeForm()
         {
             this.FormBorderStyle = FormBorderStyle.None;
             this.ControlBox = false;
-            this.StartPosition = FormStartPosition.Manual; 
+            this.StartPosition = FormStartPosition.Manual;
             this.BackColor = ColorTranslator.FromHtml("#1e1e1e");
             this.Width = 360;
-            this.Height = 480;
+            //this.Height = 480;
+            this.Height = 280;
         }
 
         private void BuildNumpadUI(string target)
@@ -67,20 +79,15 @@ namespace NV22SpectralInteg.NumPad
                 btn.FlatAppearance.MouseDownBackColor = ColorTranslator.FromHtml("#444444");
                 btn.FlatAppearance.MouseOverBackColor = ColorTranslator.FromHtml("#3a3a3a");
 
-                btn.GotFocus += (s, e) => ((Button)s).Parent.Focus();
-
-                // The code you asked for, but not the recommended approach
+                // Check for special keys to use icons
                 if (key == "Back")
                 {
-                    btn.Text = "⬅️"; // Unicode for Left Arrow
+                    btn.Text = "⬅️";
                 }
                 else if (key == "Enter")
                 {
-                    btn.Text = "⏎"; // Unicode for Return Symbol
-                }
-                else
-                {
-                    btn.Text = key;
+                    btn.Text = "⏎";
+                    btn.BackColor = ColorTranslator.FromHtml("#25c866"); // Make the Enter key green
                 }
 
                 btn.Click += (sender, e) => NumpadButton_Click(sender, e, target);
@@ -98,8 +105,25 @@ namespace NV22SpectralInteg.NumPad
             switch (key)
             {
                 case "Back":
-                    if (targetTextBox.Text.Length > 0)
-                        targetTextBox.Text = ""; // or Substring(...) if needed
+                    // Special logic for OTP boxes
+                    if (targetName == "OTPNumber")
+                    {
+                        // If the current box is not empty, clear it
+                        if (targetTextBox.Text.Length > 0)
+                        {
+                            targetTextBox.Text = "";
+                        }
+                        // If the current box is empty and it's not the first one, move back
+                        else if (currentIndex > 0)
+                        {
+                            otpBoxes[currentIndex - 1].Focus();
+                        }
+                    }
+                    // General backspace logic for other text boxes
+                    else if (targetTextBox.Text.Length > 0)
+                    {
+                        targetTextBox.Text = targetTextBox.Text.Substring(0, targetTextBox.Text.Length - 1);
+                    }
                     break;
 
                 case "Enter":
@@ -111,13 +135,18 @@ namespace NV22SpectralInteg.NumPad
                     if (targetName == "OTPNumber")
                     {
                         targetTextBox.Text = key;
+
+                        // Move focus to the next box
+                        if (currentIndex < otpBoxes.Length - 1)
+                        {
+                            otpBoxes[currentIndex + 1].Focus();
+                        }
                     }
                     else
                     {
                         targetTextBox.Text += key;
                     }
                     break;
-
             }
         }
 

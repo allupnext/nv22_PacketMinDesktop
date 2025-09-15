@@ -1,6 +1,8 @@
-﻿using Newtonsoft.Json;
+﻿using BCSKioskServerCrypto;
+using Newtonsoft.Json;
 using NV22SpectralInteg.Classes;
 using NV22SpectralInteg.Login;
+using NV22SpectralInteg.Services;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -14,7 +16,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using NV22SpectralInteg.Services;
 
 
 namespace NV22SpectralInteg.Dashboard
@@ -249,7 +250,7 @@ namespace NV22SpectralInteg.Dashboard
             {
                 Logger.Log("🟢 Preparing transaction...");
 
-                // Safety check: Ensure there is actually data to send.
+                //Safety check: Ensure there is actually data to send.
                 if (!_validator.NoteEscrowCounts.Any())
                 {
                     Logger.Log("⚠️ Confirm button clicked, but no amount was detected. Resetting.");
@@ -340,6 +341,25 @@ namespace NV22SpectralInteg.Dashboard
                         Logger.Log("✅ Transaction succeeded!");
                         Logger.Log($"💳 New balance: {result.userBalance}");
 
+                        var receiptData = new LocalRequestBean
+                        {
+                            operation = "bankadd",
+                            customerName = AppSession.CustomerName,
+                            kioskTotalAmount = kioskTotalAmount,
+                            amountDetails = amountDetails.Select(ad => new AmountDetail
+                            {
+                                denomination = ad.denomination,
+                                count = ad.count,
+                                total = ad.total
+                            }).ToList()
+                        };
+
+                        Logger.Log("🚀 ReceiptPrinter constructor call...");
+                        // Call the print function
+                        var printer = new ReceiptPrinter(receiptData);
+                        Logger.Log("🚀 Print Receipt call...");
+                        printer.printReceipt();
+
                         var successPopup = new SuccessPopup(AppSession.CustomerName, currentGrandTotal);
                         successPopup.ShowDialog(this);
 
@@ -424,9 +444,9 @@ namespace NV22SpectralInteg.Dashboard
             notesTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33f));
             notesTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33f));
 
-            AddStyledCell(notesTable, "Note", 0, 0, header: true, alignment: ContentAlignment.MiddleCenter);
-            AddStyledCell(notesTable, "Count", 1, 0, header: true, alignment: ContentAlignment.MiddleCenter);
-            AddStyledCell(notesTable, "Total", 2, 0, header: true, alignment: ContentAlignment.MiddleCenter);
+            AddStyledCell(notesTable, "Note", 0, 0, header: true, alignment: ContentAlignment.MiddleCenter, isGrandTotalRow: false);
+            AddStyledCell(notesTable, "Count", 1, 0, header: true, alignment: ContentAlignment.MiddleCenter, isGrandTotalRow: false);
+            AddStyledCell(notesTable, "Total", 2, 0, header: true, alignment: ContentAlignment.MiddleCenter, isGrandTotalRow: false);
 
             int row = 1;
             if (counts.Any())
@@ -445,14 +465,15 @@ namespace NV22SpectralInteg.Dashboard
 
                     Logger.Log($"Added row - Denomination: {denomination} USD, Count: {count}, Total: {total}");
 
-                    AddStyledCell(notesTable, $"{denomination} USD", 0, row, alignment: ContentAlignment.MiddleCenter);
-                    AddStyledCell(notesTable, count.ToString(), 1, row, alignment: ContentAlignment.MiddleCenter);
-                    AddStyledCell(notesTable, total.ToString(), 2, row, alignment: ContentAlignment.MiddleCenter);
+                    AddStyledCell(notesTable, $"{denomination} USD", 0, row, alignment: ContentAlignment.MiddleCenter, isGrandTotalRow: false);
+                    AddStyledCell(notesTable, count.ToString(), 1, row, alignment: ContentAlignment.MiddleCenter, isGrandTotalRow: false);
+                    AddStyledCell(notesTable, total.ToString(), 2, row, alignment: ContentAlignment.MiddleCenter, isGrandTotalRow: false);
                     row++;
                 }
 
-                AddStyledCell(notesTable, "Grand Total", 0, row, header: true, colSpan: 2, alignment: ContentAlignment.MiddleCenter);
-                AddStyledCell(notesTable, grandTotal.ToString(), 2, row, header: true, alignment: ContentAlignment.MiddleRight);
+                AddStyledCell(notesTable, "Grand Total", 0, row, header: true, colSpan: 2, alignment: ContentAlignment.MiddleCenter, isGrandTotalRow: true);
+                AddStyledCell(notesTable, grandTotal.ToString(), 2, row, header: true, alignment: ContentAlignment.MiddleCenter, isGrandTotalRow: true);
+
                 Logger.Log($"Grand total calculated and added to table: {grandTotal}");
             }
             else
@@ -477,21 +498,21 @@ namespace NV22SpectralInteg.Dashboard
             return wrapper;
         }
 
-        private void AddStyledCell(TableLayoutPanel table, string text, int col, int row, bool header = false, int colSpan = 1, ContentAlignment alignment = ContentAlignment.MiddleCenter)
+        private void AddStyledCell(TableLayoutPanel table, string text, int col, int row, bool header = false, int colSpan = 1, ContentAlignment alignment = ContentAlignment.MiddleCenter, bool isGrandTotalRow = false)
         {
             Label label = new Label
             {
                 Text = text,
-                ForeColor = header ? Color.White : ColorTranslator.FromHtml("#212529"),
+                ForeColor = isGrandTotalRow ? ColorTranslator.FromHtml("#11150F") : header ? Color.White : ColorTranslator.FromHtml("#212529"),
                 Font = new Font("Poppins", 14, header ? FontStyle.Bold : FontStyle.Regular),
-                BackColor = header ? ColorTranslator.FromHtml("#212529") : ColorTranslator.FromHtml("#FFF"),
+                BackColor = isGrandTotalRow ? ColorTranslator.FromHtml("#D1E7DD") : header ? ColorTranslator.FromHtml("#212529") : ColorTranslator.FromHtml("#FFF"),
                 Dock = DockStyle.Fill,
                 MinimumSize = new Size(0, 40),
                 Margin = new Padding(0), // Use Margin 0 for perfect borders
                 Padding = new Padding(10, 0, 10, 0), // ✅ ADD PADDING for left/right alignment
                 TextAlign = alignment // ✅ USE THE NEW ALIGNMENT PARAMETER
             };
-
+            
             label.Paint += (sender, e) =>
             {
                 ControlPaint.DrawBorder(e.Graphics, label.ClientRectangle,
@@ -1048,9 +1069,9 @@ namespace NV22SpectralInteg.Dashboard
 
         public Dictionary<string, int> testCounts = new Dictionary<string, int>
         {
-            { "$1", 2 },
-            { "$2", 2 },
-            { "$5", 2 },
+            //{ "$1", 2 },
+            //{ "$2", 2 },
+            //{ "$5", 2 },
             { "$10", 2 },
             { "$20", 2 },
             { "$50", 2 },

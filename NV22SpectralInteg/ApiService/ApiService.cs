@@ -13,6 +13,7 @@ public static class ApiService
     private static readonly HttpClient client = new HttpClient();
     internal const string BaseUrl = "https://uat.pocketmint.ai/api/kiosks";
     internal const string AuthToken = "a55cf4p6-e57a-3w20-8ag4-33s55d27ev78";
+    //private const string mode = "development";
     private const string mode = "live";
 
     static ApiService()

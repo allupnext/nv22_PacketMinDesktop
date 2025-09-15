@@ -47,6 +47,7 @@ namespace NV22SpectralInteg.Login
         private TableLayoutPanel otpBoxesPanel;
         private Label infoLabel;
         private Button verifyButton;
+        private Numpad currentNumpad;
 
         private CValidator validator;
         public LoginForm()
@@ -60,6 +61,10 @@ namespace NV22SpectralInteg.Login
 
             this.validator = new CValidator();
             this.Shown += LoginForm_Shown;
+
+            currentNumpad = new Numpad(null, "");
+            currentNumpad.Owner = this; // Set the owner for proper management
+            currentNumpad.Hide();
         }
 
         private void InitializeCountryCodes()
@@ -256,13 +261,7 @@ namespace NV22SpectralInteg.Login
 
             phoneTextBox.Click += (s, e) =>
             {
-                Point textBoxScreenLocation = phoneTextBox.PointToScreen(Point.Empty);
-                var numpad = new Numpad(phoneTextBox, "MobileNumber");
-                numpad.StartPosition = FormStartPosition.Manual;
-                int numpadX = textBoxScreenLocation.X;
-                int numpadY = textBoxScreenLocation.Y + phoneTextBox.Height + 5;
-                numpad.Location = new Point(numpadX, numpadY);
-                numpad.ShowDialog();
+                ShowNumpad(phoneTextBox, "MobileNumber");
             };
 
             phoneTextContainer.Controls.Add(phoneTextBox);
@@ -343,34 +342,33 @@ namespace NV22SpectralInteg.Login
             // Use a TableLayoutPanel instead of FlowLayoutPanel for better control over cell sizes
             otpBoxesPanel = new TableLayoutPanel
             {
-                Dock = DockStyle.Fill, // Dock to fill the parent container
+                Width = 460, // Match the width of other main controls
+                Height = 80, // Set a fixed height for the panel
                 RowCount = 1,
-                ColumnCount = 4, // 4 columns for 4 OTP boxes
-                Margin = new Padding(0, 0, 0, 15),
+                ColumnCount = 4,
                 Visible = false,
-                BackColor = Color.Transparent
+                BackColor = Color.Transparent, // Ensure the panel is transparent
+                Padding = new Padding(0)
             };
             stackPanel.Controls.Add(otpBoxesPanel);
 
-            // Set column styles to make them all equal width (25% each)
+            // Set column styles to make them all equal width
             for (int i = 0; i < 4; i++)
             {
                 otpBoxesPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
             }
 
-            // Initialize the arrays
             otpTextBoxes = new TextBox[4];
-            otpBoxContainers = new Panel[4]; // Array to hold the panels
 
             for (int i = 0; i < 4; i++)
             {
-                var otpBoxContainer = new Panel
+                // A panel to act as a container and manage the border
+                var containerPanel = new Panel
                 {
-                    // Dock the container to fill its cell in the TableLayoutPanel
                     Dock = DockStyle.Fill,
-                    Margin = new Padding(5), // Add a margin for spacing between boxes
-                    Padding = new Padding(4), // Padding to create the border effect
-                    BackColor = Color.DimGray // This is the border color
+                    Margin = new Padding(10, 10, 10, 10),
+                    Padding = new Padding(1), // Use padding to create the border effect
+                    BackColor = ColorTranslator.FromHtml("#363636") // Border color
                 };
 
                 var otpTextBox = new TextBox
@@ -378,24 +376,29 @@ namespace NV22SpectralInteg.Login
                     MaxLength = 1,
                     Font = new Font("Poppins", 20, FontStyle.Bold),
                     TextAlign = HorizontalAlignment.Center,
-                    BackColor = ColorTranslator.FromHtml("#222223"),
+                    BackColor = ColorTranslator.FromHtml("#1C1C1C"), // A dark charcoal gray
                     ForeColor = Color.White,
-                    BorderStyle = BorderStyle.None,
-                    Tag = i,
-                    Dock = DockStyle.Fill // Dock the TextBox to fill its parent container (the panel)
+                    BorderStyle = BorderStyle.None, // No default border
+                    Dock = DockStyle.Fill,
+                    Tag = i
                 };
 
+                // Event handlers for functionality
                 otpTextBox.Enter += OtpTextBox_Enter;
                 otpTextBox.Leave += OtpTextBox_Leave;
                 otpTextBox.TextChanged += OtpTextBox_TextChanged;
                 otpTextBox.KeyDown += OtpTextBox_KeyDown;
 
-                otpBoxContainer.Controls.Add(otpTextBox);
-                otpBoxesPanel.Controls.Add(otpBoxContainer, i, 0); // Add the container to a specific cell
+                // Attach the new click handler
+                otpTextBox.Click += ShowNumpad_Click;
 
+                // Add TextBox to the container panel
+                containerPanel.Controls.Add(otpTextBox);
+                // Add the container panel to the TableLayoutPanel
+                otpBoxesPanel.Controls.Add(containerPanel, i, 0);
                 otpTextBoxes[i] = otpTextBox;
-                otpBoxContainers[i] = otpBoxContainer;
             }
+
             infoLabel = new Label
             {
                 Text = "A code has been sent to your phone",
@@ -616,7 +619,7 @@ namespace NV22SpectralInteg.Login
                         else
                         {
                             Logger.Log("Privacy Policy accepted ✅");
-                            Global.ComPort = "COM7";
+                            Global.ComPort = "COM6";
                             dashboard.MainLoop();
                         }
                     }
@@ -674,27 +677,66 @@ namespace NV22SpectralInteg.Login
             CenterLoginUI(loginPanel);
         }
 
+        private void ShowNumpad(TextBox target, string targetName, TextBox[] otpBoxes = null, int currentIndex = -1)
+        {
+            // Check if the numpadInstance is null or has been disposed of.
+            // If so, create a new instance.
+            if (currentNumpad == null || currentNumpad.IsDisposed)
+            {
+                // Pass the target into the constructor and store the new instance
+                currentNumpad = new Numpad(target, targetName, otpBoxes, currentIndex);
+                currentNumpad.Owner = this; // Set the owner for proper management.
+            }
+            else
+            {
+                // If the numpad is already open, simply update its target.
+                // The SetTarget method must be implemented in your Numpad class.
+                currentNumpad.SetTarget(target, targetName, otpBoxes, currentIndex);
+            }
+
+            Point textBoxScreenLocation;
+
+            // Get the screen location of the target TextBox
+            if (targetName == "OTPNumber" && otpBoxes != null && otpBoxes.Length > 0)
+            {
+                // Fix the location to the first OTP box to prevent the numpad from moving.
+                textBoxScreenLocation = otpBoxes[0].PointToScreen(Point.Empty);
+            }
+            else
+            {
+                // For all other text boxes (like phone number or kiosk ID), use the current target's location.
+                textBoxScreenLocation = target.PointToScreen(Point.Empty);
+            }
+            // Calculate the new numpad location
+            int numpadX = textBoxScreenLocation.X;
+            int numpadY = textBoxScreenLocation.Y + target.Height + 5;
+
+            // Set the location of the numpad
+            currentNumpad.Location = new Point(numpadX, numpadY);
+
+            // Show the numpad
+            currentNumpad.Show();
+        }
+
+
+
         // Add these two new event handler methods to your class
+        private void ShowNumpad_Click(object sender, EventArgs e)
+        {
+            TextBox currentTextBox = sender as TextBox;
+            int currentIndex = (int)currentTextBox.Tag;
+
+            // Call the shared method for the OTP fields
+            ShowNumpad(currentTextBox, "OTPNumber", otpTextBoxes, currentIndex);
+        }
 
         private void OtpTextBox_Enter(object sender, EventArgs e)
         {
             TextBox currentTextBox = sender as TextBox;
             if (currentTextBox?.Parent is Panel parentPanel)
             {
-                // Change the border color to white when the box is active
-                parentPanel.BackColor = Color.White;
+                ShowNumpad_Click(sender, e);
             }
-
-            currentTextBox.Click += (s, e) =>
-            {
-                Point textBoxScreenLocation = currentTextBox.PointToScreen(Point.Empty);
-                var numpad = new Numpad(currentTextBox, "OTPNumber");
-                numpad.StartPosition = FormStartPosition.Manual;
-                int numpadX = textBoxScreenLocation.X;
-                int numpadY = textBoxScreenLocation.Y + currentTextBox.Height + 5;
-                numpad.Location = new Point(numpadX, numpadY);
-                numpad.ShowDialog();
-            };
         }
 
         private void OtpTextBox_Leave(object sender, EventArgs e)
@@ -725,11 +767,6 @@ namespace NV22SpectralInteg.Login
                 containerPanel.Padding = new Padding(1);
             }
 
-            int currentIndex = (int)currentTextBox.Tag;
-            if (currentTextBox.Text.Length > 0 && currentIndex < otpTextBoxes.Length - 1)
-            {
-                otpTextBoxes[currentIndex + 1].Focus();
-            }
         }
 
         private void OtpTextBox_KeyDown(object sender, KeyEventArgs e)
@@ -962,13 +999,7 @@ namespace NV22SpectralInteg.Login
 
             kioskTextBox.Click += (s, e) =>
             {
-                Point textBoxScreenLocation = kioskTextBox.PointToScreen(Point.Empty);
-                var numpad = new Numpad(kioskTextBox, "KioskNumber");
-                numpad.StartPosition = FormStartPosition.Manual;
-                int numpadX = textBoxScreenLocation.X;
-                int numpadY = textBoxScreenLocation.Y + kioskTextBox.Height + 5;
-                numpad.Location = new Point(numpadX, numpadY);
-                numpad.ShowDialog();
+                ShowNumpad(kioskTextBox, "KioskNumber");
             };
 
             kioskTextContainer.Controls.Add(kioskTextBox);
