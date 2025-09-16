@@ -109,7 +109,7 @@ namespace NV22SpectralInteg.Dashboard
             {
                 Text = amount.ToString("C", new System.Globalization.CultureInfo("en-US")), // Formats as $1,200.00
                 Font = new Font("Poppins", 28F, FontStyle.Bold),
-                ForeColor = ColorTranslator.FromHtml("#008000"),
+                ForeColor = ColorTranslator.FromHtml("#25c866"),
                 Size = new Size(this.ClientSize.Width - 40, 50),
                 BackColor = Color.White,
                 TextAlign = ContentAlignment.MiddleCenter,

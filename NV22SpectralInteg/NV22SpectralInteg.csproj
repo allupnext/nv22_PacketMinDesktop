@@ -16,8 +16,8 @@
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="QRCoder" Version="1.6.0" />
-    <PackageReference Include="System.IO.Ports" Version="9.0.6" />
-    <PackageReference Include="System.Management" Version="9.0.8" />
+    <PackageReference Include="System.IO.Ports" Version="9.0.9" />
+    <PackageReference Include="System.Management" Version="9.0.9" />
   </ItemGroup>
 
   <ItemGroup>
@@ -46,6 +46,9 @@
 
   <ItemGroup>
     <None Update="Image\-PocketMint.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Image\Logo.ico">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="Image\Logo.png">

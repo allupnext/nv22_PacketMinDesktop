@@ -55,6 +55,9 @@ public static class ApiService
 
                 AppSession.KioskId = result.data.KIOSKID;
                 AppSession.KioskRegId = result.data.REGID;
+                AppSession.StoreName = result.data.KIOSKNAME;
+                AppSession.StoreAddress = $"{result.data.ADDRESS}, {result.data.CITY}, {result.data.LOCATION}, {result.data.ZIPCODE}";
+
                 return (true, null);
             }
             catch (Exception ex)

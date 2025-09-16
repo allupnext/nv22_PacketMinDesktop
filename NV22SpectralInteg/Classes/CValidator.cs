@@ -832,6 +832,9 @@ namespace NV22SpectralInteg.Classes
 
         public void DisplayNoteCounts(TextBox log)
         {
+            if (log == null || log.IsDisposed)
+                return;
+
             log.AppendText("Note escrow summary:\r\n");
             foreach (var entry in _noteEscrowCounts)
             {

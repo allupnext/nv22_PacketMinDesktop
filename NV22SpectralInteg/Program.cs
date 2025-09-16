@@ -22,21 +22,13 @@ namespace NV22SpectralInteg
                 System.Threading.Thread.Sleep(3000);
             }
 
-            //var amountDetails = new List<AmountDetail>
-            //{
-            //    new AmountDetail { denomination = 10, count = 1, total = 10 },
-            //    new AmountDetail { denomination = 20, count = 2, total = 40 },
-            //    new AmountDetail { denomination = 5, count = 5, total = 25 }
-            //};
-
-            //int grandTotal = amountDetails.Sum(detail => detail.total);
+           
 
             //var dummyRequestBean = new LocalRequestBean
             //{
             //    operation = "bankadd",
-            //    customerName = "John Doe",
-            //    amountDetails = amountDetails,
-            //    kioskTotalAmount = grandTotal
+            //    kioskTotalAmount = 100.00m,
+            //    feeAmount = 8.00m,
             //};
 
             //var printer = new ReceiptPrinter(dummyRequestBean);

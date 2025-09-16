@@ -380,7 +380,8 @@ namespace NV22SpectralInteg.Login
                     ForeColor = Color.White,
                     BorderStyle = BorderStyle.None, // No default border
                     Dock = DockStyle.Fill,
-                    Tag = i
+                    Tag = i,
+                    ReadOnly = true
                 };
 
                 // Event handlers for functionality
@@ -406,7 +407,7 @@ namespace NV22SpectralInteg.Login
                 Font = new Font("Poppins", 12),
                 AutoSize = false,
                 Width = 460,
-                Height = 30,
+                Height = 35,
                 TextAlign = ContentAlignment.MiddleCenter,
                 Margin = new Padding(0, 0, 0, 10),
                 Visible = false,
@@ -515,6 +516,7 @@ namespace NV22SpectralInteg.Login
         private async void LoginButton_Click(object sender, EventArgs e)
         {
             Logger.Log("Login button clicked (Send OTP) 🔑");
+            currentNumpad.Close();
 
             if (string.IsNullOrEmpty(phoneTextBox.Text))
             {
@@ -571,7 +573,7 @@ namespace NV22SpectralInteg.Login
         private async void VerifyButton_Click(object sender, EventArgs e)
         {
             Logger.Log("Verify OTP button clicked 🔐");
-
+            currentNumpad.Close();
             string otp = otpTextBoxes[0].Text + otpTextBoxes[1].Text + otpTextBoxes[2].Text + otpTextBoxes[3].Text;
 
             //if (otp.Length != 4)
@@ -619,7 +621,7 @@ namespace NV22SpectralInteg.Login
                         else
                         {
                             Logger.Log("Privacy Policy accepted ✅");
-                            Global.ComPort = "COM6";
+                            Global.ComPort = "COM7";
                             dashboard.MainLoop();
                         }
                     }
@@ -801,21 +803,6 @@ namespace NV22SpectralInteg.Login
         }
 
        
-        private Control CenterControl(Control ctrl)
-        {
-            var panel = new Panel
-            {
-                Width = 440,
-                Height = ctrl.Height,
-                BackColor = Color.Transparent,
-                Margin = new Padding(0, 5, 0, 5)
-            };
-
-            ctrl.Left = (panel.Width - ctrl.Width) / 2;
-            panel.Controls.Add(ctrl);
-            return panel;
-        }
-
         private void AddCustomControlBox()
         {
             controlBoxPanel = new Panel
@@ -1039,6 +1026,7 @@ namespace NV22SpectralInteg.Login
 
             submitBtn.Click += async (s, e) =>
             {
+                currentNumpad.Close();
                 string kioskId = kioskTextBox.Text.Trim();
                 if (string.IsNullOrWhiteSpace(kioskId))
                 {

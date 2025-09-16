@@ -10,47 +10,12 @@ namespace BCSKioskServerCrypto
     public class LocalRequestBean
     {
         public string operation { get; set; }
-        public string customerName { get; set; }
-        public List<AmountDetail> amountDetails { get; set; }
-        public int kioskTotalAmount { get; set; }
-
-        // public string address { get; set; }
-        // public string city { get; set; }
-        // public string zipCode { get; set; }
-        // public string transactionId { get; set; }
-        // public string amount { get; set; }
-        // public string gameName { get; set; }
-        // public string idnNo { get; set; }
-        // public string pin { get; set; }
-        // public string gameURL { get; set; }
-        // public string gamePlayerId { get; set; }
-        // public string gamePassword { get; set; }
-        // public string mode { get; set; }
-        // public string bcsFee { get; set; }
-        // public int gameTipFee { get; set; }
-        // public string redeemableAmount { get; set; }
-        // public string paymentQRCode { get; set; }
-        // public string currEntDate { get; set; }
-        // public string currTransactionId { get; set; }
-        // public string currAmount { get; set; }
-        // public string lastTransactionId { get; set; }
-        // public string lastEntDate { get; set; }
-        // public string lastAmount { get; set; }
-        // public string currCashin { get; set; }
-        // public string currCashout { get; set; }
-        // public string currSettledAmount { get; set; }
-        // public string lastCashin { get; set; }
-        // public string lastCashout { get; set; }
-        // public string lastSettledAmount { get; set; }
+        public decimal kioskTotalAmount { get; set; }
+        public decimal feeAmount { get; set; }
+        public bool isSucceed { get; set; } = true;
     }
 
-    public class AmountDetail
-    {
-        public int denomination { get; set; }
-        public int count { get; set; }
-        public int total { get; set; }
-    }
-
+    
     public class ReceiptPrinter
     {
         private PrintDocument printDocument;
@@ -59,19 +24,23 @@ namespace BCSKioskServerCrypto
         private Image headerImage;
         private Image gameQR;
         private Image claimBTCQR;
+        string imagePath = Path.Combine(Application.StartupPath, "Image", "-PocketMint.png");
 
         public ReceiptPrinter(LocalRequestBean requestBean)
         {
-            Logger.Log($"👉 We Received operation: {requestBean.operation}, customerName: {requestBean.customerName}, kioskTotalAmount: {requestBean.kioskTotalAmount}");
+            Logger.Log($"👉 We Received operation: {requestBean.operation}, customerName: {AppSession.CustomerName}, kioskTotalAmount: {requestBean.kioskTotalAmount}");
             Logger.Log("📋 Logging individual AmountDetail items...");
 
-            foreach (var ad in requestBean.amountDetails)
+
+            if (File.Exists(imagePath))
             {
-                Logger.Log($"🧾 AmountDetail - Denomination: {ad.denomination}, Count: {ad.count}, Total: {ad.total}");
+                headerImage = Image.FromFile(imagePath);
+            }
+            else
+            {
+                Logger.Log("❌ Header image not found at: " + imagePath);
             }
 
-
-            //headerImage = Image.FromFile(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Images", SessionManager.vendor + ".png"));
             this.localRequestBean = requestBean;
 
             printDocument = new PrintDocument();
@@ -92,66 +61,126 @@ namespace BCSKioskServerCrypto
             sf.LineAlignment = StringAlignment.Center;
             sf.Alignment = StringAlignment.Center;
 
-            Font font = new Font("Arial", 11);
-            Font boldFont = new Font("Arial", 11, FontStyle.Bold);
+            Font font = new Font("Arial", 10);
+            Font boldFont = new Font("Arial", 10, FontStyle.Bold);
             Font largeFont = new Font("Arial", 14, FontStyle.Bold);
 
             float lineHeight = font.GetHeight(e.Graphics) + 1;
             float x = 10;
-            float y = 20;
-
-            if (headerImage != null)
-            {
-                e.Graphics.DrawImage(headerImage, x, y, headerImage.Width - 200, headerImage.Height - 50);
-                y += headerImage.Height + lineHeight;
-            }
-            x += 5;
-            y += 5;
+            float y = 10;
 
             if (localRequestBean.operation == "bankadd")
             {
-                // Define a new, wider starting x-coordinate for better alignment
-                float receiptX = 20;
+                // Set up initial vertical position and left margin
+                float receiptX = 10;
+                float pageWidth = e.PageBounds.Width;
+                float pageCenter = pageWidth / 2f;
+                StringFormat centerFormat = new StringFormat() { Alignment = StringAlignment.Center };
+                y = 20; // starting vertical position
+                lineHeight = font.GetHeight(e.Graphics) + 4;
 
-                // CUSTOMER line
-                e.Graphics.DrawString($"CUSTOMER: {localRequestBean.customerName}", boldFont, Brushes.Black, receiptX, y);
-                y += lineHeight + 20;
-
-                // --- TABLE HEADERS ---
-                e.Graphics.DrawString("Note", boldFont, Brushes.Black, receiptX, y);
-                e.Graphics.DrawString("Count", boldFont, Brushes.Black, receiptX + 100, y);
-                e.Graphics.DrawString("Total", boldFont, Brushes.Black, receiptX + 200, y);
-                y += lineHeight + 5;
-
-                // Draw a separator line for the header
-                e.Graphics.DrawLine(Pens.Black, receiptX, y, e.PageBounds.Width - 20, y);
-                y += 5;
-
-                // --- TABLE ROWS (loop) ---
-                var amountDetails = localRequestBean.amountDetails;
-                if (amountDetails != null)
+                // --- HEADER / LOGO ---
+                if (headerImage != null)
                 {
-                    foreach (var detail in amountDetails)
-                    {
-                        // Print a new row with three columns
-                        e.Graphics.DrawString($"${detail.denomination}", font, Brushes.Black, receiptX, y);
-                        e.Graphics.DrawString($"{detail.count}", font, Brushes.Black, receiptX + 100, y);
-                        e.Graphics.DrawString($"${detail.total}", font, Brushes.Black, receiptX + 200, y);
+                    int drawWidth = 150;
+                    int drawHeight = (int)(headerImage.Height * (drawWidth / (float)headerImage.Width));
 
-                        y += lineHeight + 5;
-                    }
+                    pageWidth = e.PageBounds.Width;
+                    float xCentered = (pageWidth - drawWidth) / 2f;
+
+                    e.Graphics.DrawImage(headerImage, xCentered, y, drawWidth, drawHeight);
+                    y += drawHeight + lineHeight;
                 }
-                y += lineHeight + 10;
 
-                // --- GRAND TOTAL ---
-                e.Graphics.DrawString("GRAND TOTAL:", largeFont, Brushes.Black, receiptX, y);
-                e.Graphics.DrawString($"${localRequestBean.kioskTotalAmount}", largeFont, Brushes.Black, receiptX + 200, y);
-                y += lineHeight + 50;
 
-                // --- THANK YOU MESSAGE ---
-                float pageCenter = e.PageBounds.Width / 2f;
-                float thankYouY = y; // Use current y position
-                e.Graphics.DrawString("Thank you!", largeFont, Brushes.Black, pageCenter, thankYouY, sf);
+                // --- TIMESTAMP ---
+                e.Graphics.DrawString("Timestamp: ", boldFont, Brushes.Black, receiptX, y);
+                float labelWidth = e.Graphics.MeasureString("Timestamp: ", boldFont).Width;
+                e.Graphics.DrawString($"{DateTime.Now:dd/MM/yyyy HH:mm:ss} EST", font, Brushes.Black, receiptX + labelWidth, y);
+                y += lineHeight;
+
+                // --- KIOSK ID ---
+                e.Graphics.DrawString("KIOSK ID: ", boldFont, Brushes.Black, receiptX, y);
+                labelWidth = e.Graphics.MeasureString("KIOSK ID: ", boldFont).Width;
+                e.Graphics.DrawString(AppSession.KioskId, font, Brushes.Black, receiptX + labelWidth, y);
+                y += lineHeight;
+
+                // --- STORE NAME ---
+                string storeNameLabel = "Store Name: ";
+                e.Graphics.DrawString(storeNameLabel, boldFont, Brushes.Black, receiptX, y);
+                labelWidth = e.Graphics.MeasureString(storeNameLabel, boldFont).Width;
+
+                string storeNameValue = AppSession.StoreName;
+                RectangleF storeNameRect = new RectangleF(receiptX + labelWidth, y, e.PageBounds.Width - (2 * receiptX) - labelWidth, 100);
+                e.Graphics.DrawString(storeNameValue, font, Brushes.Black, storeNameRect);
+                SizeF storeNameSize = e.Graphics.MeasureString(storeNameValue, font, (int)(e.PageBounds.Width - (2 * receiptX) - labelWidth));
+                y += storeNameSize.Height;
+
+                // --- STORE ADDRESS ---
+                string addressLabel = "Store Address: ";
+                e.Graphics.DrawString(addressLabel, boldFont, Brushes.Black, receiptX, y);
+                labelWidth = e.Graphics.MeasureString(addressLabel, boldFont).Width;
+
+                string addressValue = AppSession.StoreAddress;
+                RectangleF addressRect = new RectangleF(receiptX + labelWidth, y, e.PageBounds.Width - (2 * receiptX) - labelWidth, 100);
+                e.Graphics.DrawString(addressValue, font, Brushes.Black, addressRect);
+                SizeF addressSize = e.Graphics.MeasureString(addressValue, font, (int)(e.PageBounds.Width - (2 * receiptX) - labelWidth));
+                y += addressSize.Height;
+
+                y += 18;
+
+                // --- CASH ENTERED ---
+                e.Graphics.DrawString("Cash Entered: ", boldFont, Brushes.Black, receiptX, y);
+                labelWidth = e.Graphics.MeasureString("Cash Entered: ", boldFont).Width;
+                e.Graphics.DrawString($"${localRequestBean.kioskTotalAmount}", font, Brushes.Black, receiptX + labelWidth, y);
+                y += lineHeight;
+
+                // --- FEES ---
+                e.Graphics.DrawString("Crypto Conversion Fees: ", boldFont, Brushes.Black, receiptX, y);
+                labelWidth = e.Graphics.MeasureString("Crypto Conversion Fees: ", boldFont).Width;
+                e.Graphics.DrawString($"${localRequestBean.feeAmount}", font, Brushes.Black, receiptX + labelWidth, y);
+                y += lineHeight;
+
+                // --- STATUS / WALLET INFO ---
+                string statusLabel = "Status: ";
+                e.Graphics.DrawString(statusLabel, boldFont, Brushes.Black, receiptX, y);
+                labelWidth = e.Graphics.MeasureString(statusLabel, boldFont).Width;
+
+                string statusValue = $"✅ Successfully deposited {(localRequestBean.kioskTotalAmount - localRequestBean.feeAmount):F2} USDT into the wallet ending with 4707.";
+                RectangleF statusRect = new RectangleF(receiptX + labelWidth, y, e.PageBounds.Width - (2 * receiptX) - labelWidth, 100);
+                e.Graphics.DrawString(statusValue, font, Brushes.Black, statusRect);
+                SizeF statusSize = e.Graphics.MeasureString(statusValue, font, (int)(e.PageBounds.Width - (2 * receiptX) - labelWidth));
+                y += statusSize.Height;
+
+
+                y += 18;
+
+
+                if (localRequestBean.isSucceed)
+                {
+                    // --- DISCLAIMER ---
+                    e.Graphics.DrawString("Disclaimer", boldFont, Brushes.Black, receiptX, y);
+                    y += 18;
+                    string disclaimer = "This receipt confirms that your cash was successfully deposited and converted to USDT. " +
+                                        "Please note that the credited balance will only appear in your PocketMint application if all eligibility requirements are met. " +
+                                        "If the user is deemed ineligible, the purchase may be voided. In such cases, a refund can be requested at the point of purchase.";
+
+                    RectangleF disclaimerRect = new RectangleF(receiptX, y, pageWidth - 40, 200);
+                    e.Graphics.DrawString(disclaimer, font, Brushes.Black, disclaimerRect);
+                }
+                else
+                {
+                    // --- Notice ---
+                    e.Graphics.DrawString("Refund Notice:", boldFont, Brushes.Black, receiptX, y);
+                    y += 18;
+                    string notice = "Your cash was not converted. Please request a refund at the point of purchase. For assistance, contact PocketMint.AI Support.";
+
+                    RectangleF noticeRect = new RectangleF(receiptX, y, pageWidth - 40, 200);
+                    e.Graphics.DrawString(notice, font, Brushes.Black, noticeRect);
+                }
+
+
+                y += 120;
 
                 Logger.Log("✅ [PrintDocument_PrintPage Call] Ending...");
             }
@@ -269,8 +298,13 @@ namespace BCSKioskServerCrypto
             try
             {
                 Logger.Log("🚀 [printReceipt Call] Starting...");
+
+                int receiptHeight = CalculateReceiptHeight();
+                PaperSize paperSize = new PaperSize("CustomReceipt", 280, receiptHeight); // 2.8" wide
+                printDocument.DefaultPageSettings.PaperSize = paperSize;
+                
+                printPreviewDialog.ShowDialog();
                 printDocument.Print();
-                //printPreviewDialog.ShowDialog();
                 // SessionManager.status = true; // Not defined in the provided code
                 Logger.Log("✅ [printReceipt Call] Completed...");
                 return true;
@@ -283,6 +317,88 @@ namespace BCSKioskServerCrypto
                 return false;
             }
         }
+        private int CalculateReceiptHeight()
+        {
+            int receiptWidth = 280; // Adjusted for 3-inch printer
+            int totalHeight = 20;   // Top padding
+
+            using (Bitmap dummyBitmap = new Bitmap(1, 1))
+            using (Graphics g = Graphics.FromImage(dummyBitmap))
+            {
+                Font font = new Font("Arial", 10);
+                Font boldFont = new Font("Arial", 11, FontStyle.Bold);
+                int lineHeight = (int)(font.GetHeight(g) + 4);
+
+                if (headerImage != null)
+                {
+                    int drawWidth = 150;
+                    int drawHeight = (int)(headerImage.Height * (drawWidth / (float)headerImage.Width));
+                    totalHeight += drawHeight + lineHeight;
+                }
+
+                // --- Fixed lines (timestamp, kiosk ID, cash, fees)
+                totalHeight += 4 * lineHeight;
+
+                // --- Store Name ---
+                string storeName = AppSession.StoreName ?? "N/A";
+                string storeNameLabel = "Store Name: ";
+                float labelWidth = g.MeasureString(storeNameLabel, boldFont).Width;
+                SizeF storeNameSize = g.MeasureString(storeName, font, (int)(receiptWidth - labelWidth - 20));
+                totalHeight += (int)storeNameSize.Height;
+
+                // --- Store Address ---
+                string storeAddress = AppSession.StoreAddress ?? "N/A";
+                string storeAddressLabel = "Store Address: ";
+                labelWidth = g.MeasureString(storeAddressLabel, boldFont).Width;
+                SizeF addressSize = g.MeasureString(storeAddress, font, (int)(receiptWidth - labelWidth - 20));
+                totalHeight += (int)addressSize.Height;
+
+                totalHeight += 18; // spacing after address
+
+                // --- Status / Wallet info ---
+                decimal netAmount = localRequestBean.kioskTotalAmount - localRequestBean.feeAmount;
+                string status = $"✅ Successfully deposited {netAmount:F2} USDT into the wallet ending with 4707.";
+                string statusLabel = "Status: ";
+                labelWidth = g.MeasureString(statusLabel, boldFont).Width;
+                SizeF statusSize = g.MeasureString(status, font, (int)(receiptWidth - labelWidth - 20));
+                totalHeight += (int)statusSize.Height + 10;
+
+                // --- Conditional section: disclaimer or refund notice ---
+                totalHeight += lineHeight; // title line ("Disclaimer" or "Refund Notice")
+
+                if (localRequestBean.isSucceed)
+                {
+                    string disclaimer = "This receipt confirms that your cash was successfully deposited and converted to USDT. " +
+                                        "Please note that the credited balance will only appear in your PocketMint application if all eligibility requirements are met. " +
+                                        "If the user is deemed ineligible, the purchase may be voided. In such cases, a refund can be requested at the point of purchase.";
+                    SizeF disclaimerSize = g.MeasureString(disclaimer, font, receiptWidth - 20);
+                    totalHeight += (int)disclaimerSize.Height + 10;
+                }
+                else
+                {
+                    string notice = "Your cash was not converted. Please request a refund at the point of purchase. For assistance, contact PocketMint.AI Support.";
+                    SizeF noticeSize = g.MeasureString(notice, font, receiptWidth - 20);
+                    totalHeight += (int)noticeSize.Height + 10;
+                }
+
+                // --- Bottom padding ---
+                totalHeight += 3 * lineHeight;
+            }
+
+            return totalHeight;
+        }
+
+
+
+        private float DrawWrappedText(Graphics graphics, string text, Font font, float x, float y, float maxWidth, float lineSpacing = 5)
+        {
+            RectangleF layoutRect = new RectangleF(x, y, maxWidth, 1000); // Large height to allow wrapping
+            graphics.DrawString(text, font, Brushes.Black, layoutRect);
+
+            SizeF measuredSize = graphics.MeasureString(text, font, (int)maxWidth);
+            return y + measuredSize.Height + lineSpacing;
+        }
+
 
         private Bitmap generateQRCode(string url)
         {

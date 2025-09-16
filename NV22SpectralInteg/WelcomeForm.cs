@@ -56,7 +56,7 @@ namespace NV22SpectralInteg
                 Image = Image.FromFile(imagePath),
                 SizeMode = PictureBoxSizeMode.Zoom,
                 // Increased size of the logo container
-                Size = new Size(400, 400),
+                Size = new Size(300, 300),
                 // Set a background color to match the panel to avoid potential rendering artifacts
                 BackColor = Color.Transparent
             };

@@ -177,7 +177,7 @@ namespace NV22SpectralInteg.Dashboard
 
             headerPanel.Layout += (sender, e) =>
             {
-                titleImage.Location = new Point((headerPanel.Width - titleImage.Width) / 2, 10);
+                titleImage.Location = new Point((headerPanel.Width - titleImage.Width) / 2, 30);
 
                 welcomeTextLabel.Location = new Point((headerPanel.Width - welcomeTextLabel.Width) / 2, titleImage.Bottom + 10);
 
@@ -216,8 +216,7 @@ namespace NV22SpectralInteg.Dashboard
             {
                 Text = "Confirm",
                 ForeColor = Color.White,
-                //BackColor = Color.FromArgb(40, 167, 69),
-                BackColor = Color.FromArgb(40, 167, 69),
+                BackColor = ColorTranslator.FromHtml("#00C853"),
                 Font = new Font("Poppins", 18, FontStyle.Bold),
                 Width = 360,
                 Height = 60,
@@ -227,10 +226,23 @@ namespace NV22SpectralInteg.Dashboard
                 Visible = false,
             };
             confirmButton.FlatAppearance.BorderSize = 0;
+            confirmButton.FlatAppearance.MouseOverBackColor = Color.White;
+            confirmButton.FlatAppearance.MouseDownBackColor = Color.White;
             confirmButton.Region = Region.FromHrgn(
-                NativeMethods.CreateRoundRectRgn(0, 0, confirmButton.Width, confirmButton.Height, 12, 12)
+                NativeMethods.CreateRoundRectRgn(0, 0, confirmButton.Width - 1, confirmButton.Height - 1, 12, 12)
             );
+
+
             confirmButton.Click += ConfirmButton_Click;
+            confirmButton.MouseEnter += (sender, e) =>
+            {
+                confirmButton.ForeColor = ColorTranslator.FromHtml("#25c866");
+            };
+
+            confirmButton.MouseLeave += (sender, e) =>
+            {
+                confirmButton.ForeColor = Color.White;
+            };
             contentPanel.Controls.Add(confirmButton);
 
             tableWrapper = new Panel { Dock = DockStyle.None, Visible = false };
@@ -274,7 +286,7 @@ namespace NV22SpectralInteg.Dashboard
                         })
                         .ToList();
 
-                    int kioskTotalAmount = amountDetails.Sum(a => a.total);
+                    decimal kioskTotalAmount = amountDetails.Sum(a => a.total);
 
                     var requestBody = new
                     {
@@ -333,7 +345,18 @@ namespace NV22SpectralInteg.Dashboard
                         Logger.Log($"❌ Transaction failed → {result.message}");
                         MessageBox.Show($"{result.message}", "Transaction Failed", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                         //ResetForNewTransaction(); 
+                        var receiptData = new LocalRequestBean
+                        {
+                            operation = "bankadd",
+                            kioskTotalAmount = kioskTotalAmount,
+                            feeAmount = 2.00m,
+                            isSucceed = result.isSucceed
+                        };
 
+                        // Call the print function
+                        var printer = new ReceiptPrinter(receiptData);
+                        Logger.Log("🚀 Print Receipt call...");
+                        printer.printReceipt();
                     }
                     else
                     {
@@ -344,14 +367,9 @@ namespace NV22SpectralInteg.Dashboard
                         var receiptData = new LocalRequestBean
                         {
                             operation = "bankadd",
-                            customerName = AppSession.CustomerName,
                             kioskTotalAmount = kioskTotalAmount,
-                            amountDetails = amountDetails.Select(ad => new AmountDetail
-                            {
-                                denomination = ad.denomination,
-                                count = ad.count,
-                                total = ad.total
-                            }).ToList()
+                            feeAmount = 2.00m,
+                            isSucceed = result.isSucceed
                         };
 
                         Logger.Log("🚀 ReceiptPrinter constructor call...");
@@ -434,7 +452,7 @@ namespace NV22SpectralInteg.Dashboard
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 BackColor = Color.FromArgb(45, 45, 45),
                 Padding = new Padding(1),
-                Margin = new Padding(10),
+                Margin = new Padding(0),
                 GrowStyle = TableLayoutPanelGrowStyle.AddRows,
                 CellBorderStyle = TableLayoutPanelCellBorderStyle.None,
                 Dock = DockStyle.Top
@@ -470,28 +488,71 @@ namespace NV22SpectralInteg.Dashboard
                     AddStyledCell(notesTable, total.ToString(), 2, row, alignment: ContentAlignment.MiddleCenter, isGrandTotalRow: false);
                     row++;
                 }
-
-                AddStyledCell(notesTable, "Grand Total", 0, row, header: true, colSpan: 2, alignment: ContentAlignment.MiddleCenter, isGrandTotalRow: true);
-                AddStyledCell(notesTable, grandTotal.ToString(), 2, row, header: true, alignment: ContentAlignment.MiddleCenter, isGrandTotalRow: true);
-
-                Logger.Log($"Grand total calculated and added to table: {grandTotal}");
             }
             else
             {
                 Logger.Log("No note counts found. Table will not display any data rows.");
             }
 
+            // Grand Total TableLayoutPanel - 1 row, 3 columns (or 2 + colSpan)
+            var grandTotalTable = new TableLayoutPanel
+            {
+                ColumnCount = 3,
+                RowCount = 1,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                BackColor = Color.Transparent,
+                Dock = DockStyle.Bottom,
+                Padding = new Padding(1),
+                Margin = new Padding(0),
+                CellBorderStyle = TableLayoutPanelCellBorderStyle.None
+            };
+
+            grandTotalTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33f)); // For label spanning 2 columns
+            grandTotalTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 30f)); // dummy, because colSpan 2
+            grandTotalTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.5f));
+
+            AddStyledCell(grandTotalTable, "Grand Total", 0, 0, header: true, colSpan: 2, alignment: ContentAlignment.MiddleCenter, isGrandTotalRow: true);
+            AddStyledCell(grandTotalTable, grandTotal.ToString(), 2, 0, header: true, alignment: ContentAlignment.MiddleCenter, isGrandTotalRow: true);
+
+            // Detect orientation based on current container size
+            bool isHorizontal = this.Width > this.Height;
+            int maxVisibleRows = isHorizontal ? 3 : 8; // 1 header + 2 or 7 data rows
+            int rowHeight = 48; // approx height per row including padding/borders
+
+            var scrollablePanel = new Panel
+            {
+                Width = 800,
+                Height = Math.Min(notesTable.PreferredSize.Height, maxVisibleRows * rowHeight),
+                AutoScroll = true,
+                BackColor = Color.Transparent,
+                Dock = DockStyle.Top,
+                Padding = new Padding(0)
+            };
+
+            scrollablePanel.Controls.Add(notesTable);
+
             var wrapper = new Panel
             {
                 Width = 800,
-                Height = Math.Min(notesTable.PreferredSize.Height, 9 * 45),
-                AutoScroll = true,
+                Height = scrollablePanel.Height + grandTotalTable.PreferredSize.Height, // add some spacing
                 BackColor = Color.Transparent,
                 Dock = DockStyle.None
             };
-            wrapper.Controls.Add(notesTable);
-            notesTable.Width = wrapper.Width - (wrapper.VerticalScroll.Visible ? SystemInformation.VerticalScrollBarWidth : 0);
 
+
+            wrapper.Controls.Add(scrollablePanel);
+            wrapper.Controls.Add(grandTotalTable);
+
+            // Position grandTotalTable manually below scrollablePanel
+            grandTotalTable.Top = scrollablePanel.Bottom + 5; // small gap
+            grandTotalTable.Left = scrollablePanel.Left;
+
+            // Handle resizing so dataTable width fits scrollablePanel width
+            scrollablePanel.Layout += (s, e) =>
+            {
+                notesTable.Width = scrollablePanel.ClientSize.Width - (scrollablePanel.VerticalScroll.Visible ? SystemInformation.VerticalScrollBarWidth : 0);
+            };
             Logger.Log($"Notes table created with wrapper size: {wrapper.Width}x{wrapper.Height}");
 
             this.currentGrandTotal = grandTotal;
@@ -1069,9 +1130,9 @@ namespace NV22SpectralInteg.Dashboard
 
         public Dictionary<string, int> testCounts = new Dictionary<string, int>
         {
-            //{ "$1", 2 },
-            //{ "$2", 2 },
-            //{ "$5", 2 },
+            { "$1", 2 },
+            { "$2", 2 },
+            { "$5", 2 },
             { "$10", 2 },
             { "$20", 2 },
             { "$50", 2 },
