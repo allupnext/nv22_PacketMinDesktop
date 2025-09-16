@@ -39,6 +39,12 @@
         }
         "Entry"
         {
+        "MsmKey" = "8:_5C9E9447BEC6433B80DD27F1815912C1"
+        "OwnerKey" = "8:_UNDEFINED"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
         "MsmKey" = "8:_605B2FA97E0E4AF4A5A2F8CB64A652C7"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
@@ -51,7 +57,7 @@
         }
         "Entry"
         {
-        "MsmKey" = "8:_9825010256744BE4AC1E18956A5FCBE9"
+        "MsmKey" = "8:_AF87DC98EDD5495B8A271E75862B28C8"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
         }
@@ -258,6 +264,26 @@
             "IsDependency" = "11:FALSE"
             "IsolateTo" = "8:"
             }
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_5C9E9447BEC6433B80DD27F1815912C1"
+            {
+            "SourcePath" = "8:..\\NV22SpectralInteg\\Image\\Logo.ico"
+            "TargetName" = "8:Logo.ico"
+            "Tag" = "8:"
+            "Folder" = "8:_52627CB538574D92AB97197D8EF1CAA1"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:FALSE"
+            "IsDependency" = "11:FALSE"
+            "IsolateTo" = "8:"
+            }
             "{9F6F8455-1EF1-4B85-886A-4223BCC8E7F7}:_605B2FA97E0E4AF4A5A2F8CB64A652C7"
             {
             "AssemblyRegister" = "3:1"
@@ -309,7 +335,7 @@
             "IsDependency" = "11:FALSE"
             "IsolateTo" = "8:"
             }
-            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_9825010256744BE4AC1E18956A5FCBE9"
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_AF87DC98EDD5495B8A271E75862B28C8"
             {
             "SourcePath" = "8:..\\NV22SpectralInteg\\Image\\Logo.ico"
             "TargetName" = "8:Logo.ico"
@@ -548,21 +574,7 @@
         }
         "Shortcut"
         {
-            "{970C0BB2-C7D0-45D7-ABFA-7EC378858BC0}:_564D0C01523F44969EECEC5AB058E964"
-            {
-            "Name" = "8:PocketMint"
-            "Arguments" = "8:"
-            "Description" = "8:"
-            "ShowCmd" = "3:1"
-            "IconIndex" = "3:0"
-            "Transitive" = "11:FALSE"
-            "Target" = "8:_B929F9E91CD04BD8AE25CFBD905FD6C3"
-            "Folder" = "8:_F1FF1E0F61F04990B1D76198CA064EA6"
-            "WorkingFolder" = "8:_DCF1E7A5B5044B1A8A4FBFA66D7C0F9C"
-            "Icon" = "8:_9825010256744BE4AC1E18956A5FCBE9"
-            "Feature" = "8:"
-            }
-            "{970C0BB2-C7D0-45D7-ABFA-7EC378858BC0}:_9C322D9D14BB4A87BEC4A32EF3353F01"
+            "{970C0BB2-C7D0-45D7-ABFA-7EC378858BC0}:_3A94C6E4D23346F0A26C264908923544"
             {
             "Name" = "8:PocketMint"
             "Arguments" = "8:"
@@ -573,7 +585,21 @@
             "Target" = "8:_B929F9E91CD04BD8AE25CFBD905FD6C3"
             "Folder" = "8:_8E57E98B55A5439D9AFC2EAEC14301CB"
             "WorkingFolder" = "8:_DCF1E7A5B5044B1A8A4FBFA66D7C0F9C"
-            "Icon" = "8:_9825010256744BE4AC1E18956A5FCBE9"
+            "Icon" = "8:_AF87DC98EDD5495B8A271E75862B28C8"
+            "Feature" = "8:"
+            }
+            "{970C0BB2-C7D0-45D7-ABFA-7EC378858BC0}:_C3B58183C6A94D4480A635FC51D71C91"
+            {
+            "Name" = "8:PocketMint"
+            "Arguments" = "8:"
+            "Description" = "8:"
+            "ShowCmd" = "3:1"
+            "IconIndex" = "3:0"
+            "Transitive" = "11:FALSE"
+            "Target" = "8:_B929F9E91CD04BD8AE25CFBD905FD6C3"
+            "Folder" = "8:_F1FF1E0F61F04990B1D76198CA064EA6"
+            "WorkingFolder" = "8:_DCF1E7A5B5044B1A8A4FBFA66D7C0F9C"
+            "Icon" = "8:_AF87DC98EDD5495B8A271E75862B28C8"
             "Feature" = "8:"
             }
         }

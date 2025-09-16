@@ -13,6 +13,8 @@ namespace BCSKioskServerCrypto
         public decimal kioskTotalAmount { get; set; }
         public decimal feeAmount { get; set; }
         public bool isSucceed { get; set; } = true;
+
+        public string printmessage { get; set; };
     }
 
     
@@ -146,7 +148,7 @@ namespace BCSKioskServerCrypto
                 e.Graphics.DrawString(statusLabel, boldFont, Brushes.Black, receiptX, y);
                 labelWidth = e.Graphics.MeasureString(statusLabel, boldFont).Width;
 
-                string statusValue = $"✅ Successfully deposited {(localRequestBean.kioskTotalAmount - localRequestBean.feeAmount):F2} USDT into the wallet ending with 4707.";
+                string statusValue = localRequestBean.printmessage;
                 RectangleF statusRect = new RectangleF(receiptX + labelWidth, y, e.PageBounds.Width - (2 * receiptX) - labelWidth, 100);
                 e.Graphics.DrawString(statusValue, font, Brushes.Black, statusRect);
                 SizeF statusSize = e.Graphics.MeasureString(statusValue, font, (int)(e.PageBounds.Width - (2 * receiptX) - labelWidth));
