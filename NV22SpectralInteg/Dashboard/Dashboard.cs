@@ -350,7 +350,7 @@ namespace NV22SpectralInteg.Dashboard
                             operation = "bankadd",
                             kioskTotalAmount = kioskTotalAmount,
                             feeAmount = 2.00m,
-                            printmessage = "✅ Successfully deposited into the wallet ending with 4707.",
+                            printmessage = result.message,
 
                             isSucceed = result.isSucceed
                         };
@@ -371,7 +371,8 @@ namespace NV22SpectralInteg.Dashboard
                             operation = "bankadd",
                             kioskTotalAmount = kioskTotalAmount,
                             feeAmount = 2.00m,
-                            isSucceed = result.isSucceed
+                            isSucceed = result.isSucceed,
+                            printmessage = result.message
                         };
 
                         Logger.Log("🚀 ReceiptPrinter constructor call...");
