@@ -302,14 +302,14 @@ namespace NV22SpectralInteg.Dashboard
                     //    kioskId = 1,
                     //    kioskRegId = 30,
                     //    customerRegId = 27,
-                    //    kioskTotalAmount = 10,
+                    //    kioskTotalAmount = 1000,
                     //    amountDetails = new[]
                     //    {
                     //        new
                     //        {
-                    //            denomination = 10,
+                    //            denomination = 1000,
                     //            count = 1,
-                    //            total = 10
+                    //            total = 1000
                     //        }
                     //    }
                     //};

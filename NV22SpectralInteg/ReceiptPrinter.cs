@@ -101,8 +101,8 @@ namespace BCSKioskServerCrypto
                 y += lineHeight;
 
                 // --- KIOSK ID ---
-                e.Graphics.DrawString("KIOSK ID: ", boldFont, Brushes.Black, receiptX, y);
-                labelWidth = e.Graphics.MeasureString("KIOSK ID: ", boldFont).Width;
+                e.Graphics.DrawString("Kiosk ID: ", boldFont, Brushes.Black, receiptX, y);
+                labelWidth = e.Graphics.MeasureString("Kiosk ID: ", boldFont).Width;
                 e.Graphics.DrawString(AppSession.KioskId, font, Brushes.Black, receiptX + labelWidth, y);
                 y += lineHeight;
 

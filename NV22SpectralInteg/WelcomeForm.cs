@@ -10,6 +10,7 @@ namespace NV22SpectralInteg
         // Declare the PictureBox as nullable (?) to resolve the CS8618 warning.
         // This tells the compiler that we intend for it to be potentially null.
         private PictureBox? pictureBox;
+        private Label? waitLabel;
 
         public WelcomeForm()
         {
@@ -50,13 +51,14 @@ namespace NV22SpectralInteg
                 return;
             }
 
+
             // Initialize the PictureBox to display the logo
             pictureBox = new PictureBox
             {
                 Image = Image.FromFile(imagePath),
                 SizeMode = PictureBoxSizeMode.Zoom,
                 // Increased size of the logo container
-                Size = new Size(300, 300),
+                Size = new Size(250, 250),
                 // Set a background color to match the panel to avoid potential rendering artifacts
                 BackColor = Color.Transparent
             };
@@ -64,36 +66,56 @@ namespace NV22SpectralInteg
             // Add the PictureBox to the background panel
             backgroundPanel.Controls.Add(pictureBox);
 
-            // Center the image once the form is loaded and displayed.
-            // Using the 'Shown' event ensures the form has its final dimensions.
-            this.Shown += (s, e) =>
+            waitLabel = new Label
             {
-                CenterImage();
+                Text = "Please wait...",
+                Font = new Font("Poppins", 26, FontStyle.Bold),
+                ForeColor = Color.White,
+                BackColor = Color.Transparent,
+                TextAlign = ContentAlignment.MiddleCenter,
+                AutoSize = true
             };
 
-            // Keep the image centered if the screen resolution changes while the form is open.
-            this.Resize += (s, e) =>
+            backgroundPanel.Controls.Add(waitLabel);
+
+
+
+            this.Shown += (s, e) =>
             {
-                CenterImage();
+                CenterControls();
             };
+
+
+
+            // Recenter controls if the screen resolution changes
+
+            this.Resize += (s, e) =>
+
+            {
+                CenterControls();
+            };
+
         }
 
-        /// <summary>
-        /// Calculates the center position of the form and moves the PictureBox to it.
-        /// </summary>
-        private void CenterImage()
+        private void CenterControls()
         {
-            // The null check is important because pictureBox is nullable
-            if (pictureBox != null && this.Parent == null) // The parent check prevents issues in the designer
+            if (pictureBox != null && waitLabel != null && this.Parent == null)
             {
-                // Calculate the point to place the top-left corner of the PictureBox
-                int x = (this.ClientSize.Width - pictureBox.Width) / 2;
-                int y = (this.ClientSize.Height - pictureBox.Height) / 2;
-                pictureBox.Location = new Point(x, y);
+
+                // Calculate the total height of the controls and the spacing
+                int totalHeight = pictureBox.Height + waitLabel.Height + 20; // 20 pixels of space between them
+                // Calculate the vertical starting position to center the group
+                int topY = (this.ClientSize.Height - totalHeight) / 2;
+
+                // Position the PictureBox at the calculated top
+                int pictureBoxX = (this.ClientSize.Width - pictureBox.Width) / 2;
+                pictureBox.Location = new Point(pictureBoxX, topY);
+
+                // Position the label below the PictureBox
+                int labelX = (this.ClientSize.Width - waitLabel.Width) / 2;
+                int labelY = pictureBox.Location.Y + pictureBox.Height + 20;
+                waitLabel.Location = new Point(labelX, labelY);
             }
         }
-
-        // This event handler is not needed, so it can be removed for cleaner code.
-        // private void Form1_Load(object sender, EventArgs e) {}
     }
 }
