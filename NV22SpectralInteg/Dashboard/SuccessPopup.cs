@@ -15,20 +15,18 @@ namespace NV22SpectralInteg.Dashboard
     public partial class SuccessPopup : Form
     {
         // Constructor that accepts the name and amount to display
-        public SuccessPopup(string recipientName, decimal amount)
+        public SuccessPopup(string recipientName, decimal amount, bool isSucceed, string message)
         {
-            InitializeCustomComponents(recipientName, amount);
+            InitializeCustomComponents(recipientName, amount, isSucceed, message);
         }
 
-        private void InitializeCustomComponents(string recipientName, decimal amount)
+        private void InitializeCustomComponents(string recipientName, decimal amount, bool isSucceed, string message)
         {
             // ===== Form Styling =====
             this.FormBorderStyle = FormBorderStyle.None; // Removes the title bar and border
             this.StartPosition = FormStartPosition.CenterParent; // Centers the popup over the parent form
-            //this.BackColor = ColorTranslator.FromHtml("#ffffff");
-            this.BackColor = Color.Fuchsia;
-            this.TransparencyKey = Color.Fuchsia;
-            this.ClientSize = new Size(500, 650); // Set a fixed size for the popup card
+            this.BackColor = ColorTranslator.FromHtml("#11150f");
+            this.ClientSize = new Size(500, 650);
             this.Padding = new Padding(20);
 
             // ===== Controls =====
@@ -36,10 +34,10 @@ namespace NV22SpectralInteg.Dashboard
             // Success Icon (Using a simple Label as a placeholder)
             Label successIcon = new Label
             {
-                Text = "✓",
+                Text = $"{(isSucceed ? "✔️" : "❌")}",
                 Font = new Font("Poppins", 25F, FontStyle.Bold),
                 ForeColor = Color.White,
-                BackColor = ColorTranslator.FromHtml("#25c866"), // A nice green color
+                BackColor = isSucceed ? ColorTranslator.FromHtml("#25c866") : ColorTranslator.FromHtml("#FF0000"), // A nice green color
                 Size = new Size(80, 80),
                 TextAlign = ContentAlignment.MiddleCenter,
                 Location = new Point((this.ClientSize.Width - 80) / 2, 0)
@@ -89,7 +87,7 @@ namespace NV22SpectralInteg.Dashboard
                 BackColor = Color.White,
                 Size = new Size(this.ClientSize.Width - 40, 60),
                 TextAlign = ContentAlignment.TopCenter,
-                Location = new Point(20, logo.Bottom - 5)
+                Location = new Point(20, logo.Bottom)
             };
 
             // Recipient Name Label
@@ -120,8 +118,8 @@ namespace NV22SpectralInteg.Dashboard
             // Receipt Info Message
             Label infoLabel = new Label
             {
-                Text = "Transaction completed.\nReceipt has been sent to your registered \nMobile number.",
-                Font = new Font("Poppins", 9F, FontStyle.Regular),
+                Text = message,
+                Font = new Font("Poppins", 11F, FontStyle.Bold),
                 ForeColor = ColorTranslator.FromHtml("#7e8088"),
                 BackColor = Color.White,
                 AutoSize = false,
@@ -130,37 +128,6 @@ namespace NV22SpectralInteg.Dashboard
                 TextAlign = ContentAlignment.MiddleCenter,
                 Location = new Point((this.ClientSize.Width - (this.ClientSize.Width - 60)) / 2, amountLabel.Bottom + 10)
             };
-
-            // 'Add New' Button
-            // --- Add New Button and its container Panel ---
-            Panel addButtonPanel = new Panel
-            {
-                Size = new Size(204, 66), // Slightly larger than the button for the border
-                Location = new Point(38, infoLabel.Bottom + 3), // Adjust position to center button
-                BackColor = Color.Transparent, // Ensure panel background is transparent
-                Tag = "addButton" // Give it a tag to identify later
-            };
-
-            Button addButton = new Button
-            {
-                Text = "Add New",
-                Font = new Font("Poppins", 12F, FontStyle.Bold),
-                ForeColor = Color.White,
-                BackColor = ColorTranslator.FromHtml("#25c866"),
-                Size = new Size(200, 62),
-                Location = new Point(2, 2), // Position button inside panel
-                FlatStyle = FlatStyle.Flat
-            };
-            addButton.FlatAppearance.BorderSize = 0;
-            addButton.FlatAppearance.MouseOverBackColor = Color.White;
-            // Create a rounded region for the button itself (the green part)
-            addButton.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, addButton.Width, addButton.Height, 12, 12));
-            addButton.Click += (sender, e) => { this.DialogResult = DialogResult.OK; };
-
-            addButtonPanel.Paint += ButtonPanel_Paint;
-            addButtonPanel.Controls.Add(addButton); // Add button to panel
-            this.Controls.Add(addButtonPanel); // Add panel to form
-
 
             // --- Log Out Button and its container Panel ---
             Panel logoutButtonPanel = new Panel
@@ -183,6 +150,8 @@ namespace NV22SpectralInteg.Dashboard
             };
             logoutButton.FlatAppearance.BorderSize = 0;
             logoutButton.FlatAppearance.MouseOverBackColor = Color.White;
+            logoutButton.FlatAppearance.MouseDownBackColor = Color.White;
+
             // Create a rounded region for the button itself (the green part)
             logoutButton.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, logoutButton.Width, logoutButton.Height, 12, 12));
             logoutButton.Click += (sender, e) => { this.DialogResult = DialogResult.Cancel; };
@@ -190,20 +159,6 @@ namespace NV22SpectralInteg.Dashboard
             logoutButtonPanel.Paint += ButtonPanel_Paint;
             logoutButtonPanel.Controls.Add(logoutButton); // Add button to panel
             this.Controls.Add(logoutButtonPanel); // Add panel to form
-
-            // Handle hover color change and border
-
-            // AddButton hover events
-            addButton.MouseEnter += (sender, e) =>
-            {
-                addButton.ForeColor = ColorTranslator.FromHtml("#25c866");
-                addButtonPanel.Invalidate(); // Trigger panel's Paint event to draw border
-            };
-            addButton.MouseLeave += (sender, e) =>
-            {
-                addButton.ForeColor = Color.White;
-                addButtonPanel.Invalidate(); // Trigger panel's Paint event to remove border
-            };
 
             // LogoutButton hover events
             logoutButton.MouseEnter += (sender, e) =>
@@ -216,6 +171,59 @@ namespace NV22SpectralInteg.Dashboard
                 logoutButton.ForeColor = Color.White;
                 logoutButtonPanel.Invalidate(); // Trigger panel's Paint event to remove border
             };
+
+            if (isSucceed)
+            {
+                // 'Add New' Button
+                // --- Add New Button and its container Panel ---
+                Panel addButtonPanel = new Panel
+                {
+                    Size = new Size(204, 66), // Slightly larger than the button for the border
+                    Location = new Point(38, infoLabel.Bottom + 3), // Adjust position to center button
+                    BackColor = Color.Transparent, // Ensure panel background is transparent
+                    Tag = "addButton" // Give it a tag to identify later
+                };
+
+                Button addButton = new Button
+                {
+                    Text = "Add New",
+                    Font = new Font("Poppins", 12F, FontStyle.Bold),
+                    ForeColor = Color.White,
+                    BackColor = ColorTranslator.FromHtml("#25c866"),
+                    Size = new Size(200, 62),
+                    Location = new Point(2, 2), // Position button inside panel
+                    FlatStyle = FlatStyle.Flat
+                };
+                addButton.FlatAppearance.BorderSize = 0;
+                addButton.FlatAppearance.MouseOverBackColor = Color.White;
+                addButton.FlatAppearance.MouseDownBackColor = Color.White;
+                // Create a rounded region for the button itself (the green part)
+                addButton.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, addButton.Width, addButton.Height, 12, 12));
+                addButton.Click += (sender, e) => { this.DialogResult = DialogResult.OK; };
+
+                addButtonPanel.Paint += ButtonPanel_Paint;
+                addButtonPanel.Controls.Add(addButton); // Add button to panel
+                this.Controls.Add(addButtonPanel); // Add panel to form
+
+                // Handle hover color change and border
+
+                // AddButton hover events
+                addButton.MouseEnter += (sender, e) =>
+                {
+                    addButton.ForeColor = ColorTranslator.FromHtml("#25c866");
+                    addButtonPanel.Invalidate(); // Trigger panel's Paint event to draw border
+                };
+                addButton.MouseLeave += (sender, e) =>
+                {
+                    addButton.ForeColor = Color.White;
+                    addButtonPanel.Invalidate(); // Trigger panel's Paint event to remove border
+                };
+            }
+            else
+            {
+                // Position the Log Out button for when it's the only one
+                logoutButtonPanel.Location = new Point((this.ClientSize.Width - 204) / 2, infoLabel.Bottom + 3);
+            }
 
             // Add all controls to the form
             this.Controls.Add(successIcon);
@@ -252,6 +260,8 @@ namespace NV22SpectralInteg.Dashboard
                 }
             }
         }
+
+
         // NEW METHOD: Event handler for drawing the border around the successIcon
         private void SuccessIcon_Paint(object sender, PaintEventArgs e)
         {
@@ -266,7 +276,6 @@ namespace NV22SpectralInteg.Dashboard
                 // Draw slightly larger than the icon to create the border
                 e.Graphics.DrawEllipse(darkBorderPen, -2, -2, successIcon.Width + 4, successIcon.Height + 4);
             }
-
             // Inner white border
             using (Pen whiteBorderPen = new Pen(Color.White, 3)) // White, 3px thick
             {
@@ -310,7 +319,7 @@ namespace NV22SpectralInteg.Dashboard
                     path.AddArc(new Rectangle(borderRect.Left, borderRect.Bottom - cornerRadius, cornerRadius, cornerRadius), 90, 90);
                     path.CloseFigure();
 
-                    using (Pen borderPen = new Pen(ColorTranslator.FromHtml("#25c866"), 2)) // Green border, 2px thick
+                    using (Pen borderPen = new Pen(ColorTranslator.FromHtml("#25c866"), 3)) // Green border, 2px thick
                     {
                         e.Graphics.DrawPath(borderPen, path);
                     }

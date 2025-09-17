@@ -13,8 +13,8 @@ public static class ApiService
     private static readonly HttpClient client = new HttpClient();
     internal const string BaseUrl = "https://uat.pocketmint.ai/api/kiosks";
     internal const string AuthToken = "a55cf4p6-e57a-3w20-8ag4-33s55d27ev78";
-    //private const string mode = "development";
-    private const string mode = "live";
+    private const string mode = "development";
+    //private const string mode = "live";
 
     static ApiService()
     {
@@ -37,10 +37,13 @@ public static class ApiService
             {
                 var requestBody = new { kioskId = int.Parse(kioskId) };
                 string jsonPayload = JsonConvert.SerializeObject(requestBody);
+                Logger.Log($"📦 Payload: {jsonPayload}");
+
                 var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
                 HttpResponseMessage response = await client.PostAsync(apiUrl, content);
                 string responseText = await response.Content.ReadAsStringAsync();
+                Logger.Log($"📬 API Response: {responseText}");
 
                 if (!response.IsSuccessStatusCode)
                 {
@@ -83,10 +86,13 @@ public static class ApiService
             {
                 var payload = new { mobileNo, kioskId = int.Parse(AppSession.KioskId) };
                 string jsonPayload = JsonConvert.SerializeObject(payload);
+                Logger.Log($"📦 Payload: {jsonPayload}");
+
                 var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
                 HttpResponseMessage response = await client.PostAsync(apiUrl, content);
                 string responseText = await response.Content.ReadAsStringAsync();
+                Logger.Log($"📬 API Response: {responseText}");
 
                 var result = JsonConvert.DeserializeObject<dynamic>(responseText);
                 if (result != null && result.isSucceed == true)
@@ -127,10 +133,13 @@ public static class ApiService
                     smsId = AppSession.smsId
                 };
                 string jsonPayload = JsonConvert.SerializeObject(payload);
+                Logger.Log($"📦 Payload: {jsonPayload}");
+
                 var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
                 HttpResponseMessage response = await client.PostAsync(apiUrl, content);
                 string responseText = await response.Content.ReadAsStringAsync();
+                Logger.Log($"📬 API Response: {responseText}");
 
                 var result = JsonConvert.DeserializeObject<dynamic>(responseText);
                 if (result != null && result.isSucceed == true && result.data != null)

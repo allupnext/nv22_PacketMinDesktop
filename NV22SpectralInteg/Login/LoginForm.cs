@@ -621,7 +621,7 @@ namespace NV22SpectralInteg.Login
                         else
                         {
                             Logger.Log("Privacy Policy accepted ✅");
-                            Global.ComPort = "COM7";
+                            Global.ComPort = "COM6";
                             dashboard.MainLoop();
                         }
                     }

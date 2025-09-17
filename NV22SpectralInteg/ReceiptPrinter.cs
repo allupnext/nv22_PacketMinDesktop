@@ -12,7 +12,7 @@ namespace BCSKioskServerCrypto
         public string operation { get; set; }
         public decimal kioskTotalAmount { get; set; }
         public decimal feeAmount { get; set; }
-        public bool isSucceed { get; set; } = true;
+        public bool isSucceed { get; set; }
     }
 
     
@@ -114,7 +114,15 @@ namespace BCSKioskServerCrypto
                 RectangleF storeNameRect = new RectangleF(receiptX + labelWidth, y, e.PageBounds.Width - (2 * receiptX) - labelWidth, 100);
                 e.Graphics.DrawString(storeNameValue, font, Brushes.Black, storeNameRect);
                 SizeF storeNameSize = e.Graphics.MeasureString(storeNameValue, font, (int)(e.PageBounds.Width - (2 * receiptX) - labelWidth));
-                y += storeNameSize.Height;
+                if (storeNameValue == null)
+                {
+                    y += lineHeight - 2;
+                }
+                else
+                {
+                    y += storeNameSize.Height;
+                }
+
 
                 // --- STORE ADDRESS ---
                 string addressLabel = "Store Address: ";
@@ -142,11 +150,13 @@ namespace BCSKioskServerCrypto
                 y += lineHeight;
 
                 // --- STATUS / WALLET INFO ---
-                string statusLabel = "Status: ";
+                string statusLabel = "Descrption: ";
                 e.Graphics.DrawString(statusLabel, boldFont, Brushes.Black, receiptX, y);
                 labelWidth = e.Graphics.MeasureString(statusLabel, boldFont).Width;
 
-                string statusValue = $"✅ Successfully deposited {(localRequestBean.kioskTotalAmount - localRequestBean.feeAmount):F2} USDT into the wallet ending with 4707.";
+                string statusValue = localRequestBean.isSucceed
+                    ? $"✅ Successfully deposited {(localRequestBean.kioskTotalAmount - localRequestBean.feeAmount):F2} USDT into the wallet ending with {AppSession.CustomerMobile.Substring(AppSession.CustomerMobile.Length - 4)}."
+                    : $"❌ Transaction unsuccessful. Funds were not deposited into the wallet ending with {AppSession.CustomerMobile.Substring(AppSession.CustomerMobile.Length - 4)}.";
                 RectangleF statusRect = new RectangleF(receiptX + labelWidth, y, e.PageBounds.Width - (2 * receiptX) - labelWidth, 100);
                 e.Graphics.DrawString(statusValue, font, Brushes.Black, statusRect);
                 SizeF statusSize = e.Graphics.MeasureString(statusValue, font, (int)(e.PageBounds.Width - (2 * receiptX) - labelWidth));
@@ -303,7 +313,7 @@ namespace BCSKioskServerCrypto
                 PaperSize paperSize = new PaperSize("CustomReceipt", 280, receiptHeight); // 2.8" wide
                 printDocument.DefaultPageSettings.PaperSize = paperSize;
                 
-                printPreviewDialog.ShowDialog();
+                //printPreviewDialog.ShowDialog();
                 printDocument.Print();
                 // SessionManager.status = true; // Not defined in the provided code
                 Logger.Log("✅ [printReceipt Call] Completed...");

@@ -14,9 +14,30 @@ namespace NV22SpectralInteg
         public static string CustomerName { get; set; } = "None";
         public static string StoreName { get; set; } = null;
         public static string StoreAddress { get; set; } = null;
+        public static decimal? StoreBalance { get; set; } = 0.00m;
         public static string CustomerMobile { get; set; } = null;
         public static decimal? CustomerBALANCE { get; set; } = 0.00m;
         public static string smsId { get; set; } = null;
 
+
+
+        // Clears all session data
+
+        public static void Clear()
+        {
+            KioskId = null;
+            KioskRegId = null;
+            CustomerRegId = null;
+            CustomerName = "None";
+            StoreName = null;
+            StoreAddress = null;
+            StoreBalance = null;
+            CustomerMobile = null;
+            CustomerBALANCE = 0.00m;
+            smsId = null;
+        }
     }
+
+
+
 }

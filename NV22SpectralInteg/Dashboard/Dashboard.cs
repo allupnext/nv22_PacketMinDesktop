@@ -223,7 +223,7 @@ namespace NV22SpectralInteg.Dashboard
                 Cursor = Cursors.Hand,
                 TextAlign = ContentAlignment.MiddleCenter,
                 FlatStyle = FlatStyle.Flat,
-                Visible = false,
+                Visible = false
             };
             confirmButton.FlatAppearance.BorderSize = 0;
             confirmButton.FlatAppearance.MouseOverBackColor = Color.White;
@@ -299,21 +299,20 @@ namespace NV22SpectralInteg.Dashboard
 
                     //var requestBody = new
                     //{
-                    //    kioskId = AppSession.KioskId,
-                    //    kioskRegId = AppSession.KioskRegId,
-                    //    customerRegId = AppSession.CustomerRegId,
-                    //    kioskTotalAmount = 0,
+                    //    kioskId = 1,
+                    //    kioskRegId = 30,
+                    //    customerRegId = 27,
+                    //    kioskTotalAmount = 1000,
                     //    amountDetails = new[]
                     //    {
                     //        new
                     //        {
-                    //            denomination = 0,
-                    //            count = 0,
-                    //            total = 0
+                    //            denomination = 1000,
+                    //            count = 1,
+                    //            total = 1000
                     //        }
                     //    }
                     //};
-
 
                     Logger.Log("📤 Sending transaction request to API...");
                     string jsonPayload = JsonConvert.SerializeObject(requestBody);
@@ -343,32 +342,14 @@ namespace NV22SpectralInteg.Dashboard
                     if (!(bool)result.isSucceed)
                     {
                         Logger.Log($"❌ Transaction failed → {result.message}");
-                        MessageBox.Show($"{result.message}", "Transaction Failed", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        //MessageBox.Show($"{result.message}", "Transaction Failed", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                         //ResetForNewTransaction(); 
-                        var receiptData = new LocalRequestBean
-                        {
-                            operation = "bankadd",
-                            kioskTotalAmount = kioskTotalAmount,
-                            feeAmount = 2.00m,
-                            isSucceed = result.isSucceed
-                        };
-
-                        // Call the print function
-                        var printer = new ReceiptPrinter(receiptData);
-                        Logger.Log("🚀 Print Receipt call...");
-                        printer.printReceipt();
-                    }
-                    else
-                    {
-                        // This block runs ONLY if the API call was successful.
-                        Logger.Log("✅ Transaction succeeded!");
-                        Logger.Log($"💳 New balance: {result.userBalance}");
 
                         var receiptData = new LocalRequestBean
                         {
                             operation = "bankadd",
                             kioskTotalAmount = kioskTotalAmount,
-                            feeAmount = 2.00m,
+                            feeAmount = result.cryptoConversionFee ?? 0.00m,
                             isSucceed = result.isSucceed
                         };
 
@@ -378,7 +359,46 @@ namespace NV22SpectralInteg.Dashboard
                         Logger.Log("🚀 Print Receipt call...");
                         printer.printReceipt();
 
-                        var successPopup = new SuccessPopup(AppSession.CustomerName, currentGrandTotal);
+                        var successPopup = new SuccessPopup(AppSession.CustomerName, currentGrandTotal, (bool)result.isSucceed, result.message.ToString());
+                        successPopup.ShowDialog(this);
+                        
+                        
+                        // Now, handle the user's choice from the popup.
+                        if (successPopup.DialogResult == DialogResult.Cancel)
+                        {
+                            // User clicked "Log Out" or closed the popup.
+                            stoprunning(); // Now it's correct to call this to log out and shut down hardware.
+                            var login = new Login.LoginForm();
+                            login.Show();
+                            AppSession.Clear();
+                            this.Hide();
+                        }
+                        
+                    }
+                    else
+                    {
+                        AppSession.StoreBalance = result.balance;
+                        Logger.Log("💰 StoreBalance is " + AppSession.StoreBalance);
+
+                        // This block runs ONLY if the API call was successful.
+                        Logger.Log("✅ Transaction succeeded!");
+                        Logger.Log($"💳 New {AppSession.CustomerBALANCE}'s balance: {result.userBalance}");
+
+                        var receiptData = new LocalRequestBean
+                        {
+                            operation = "bankadd",
+                            kioskTotalAmount = kioskTotalAmount,
+                            feeAmount = result.cryptoConversionFee,
+                            isSucceed = result.isSucceed
+                        };
+
+                        Logger.Log("🚀 ReceiptPrinter constructor call...");
+                        // Call the print function
+                        var printer = new ReceiptPrinter(receiptData);
+                        Logger.Log("🚀 Print Receipt call...");
+                        printer.printReceipt();
+
+                        var successPopup = new SuccessPopup(AppSession.CustomerName, currentGrandTotal, (bool)result.isSucceed, result.message.ToString());
                         successPopup.ShowDialog(this);
 
                         try
@@ -406,13 +426,14 @@ namespace NV22SpectralInteg.Dashboard
                         else
                         {
                             // User clicked "Log Out" or closed the popup.
-                            this.Hide();
-                            stoprunning(); // Now it's correct to call this to log out and shut down hardware.
                             var login = new Login.LoginForm();
                             login.Show();
+                            stoprunning(); // Now it's correct to call this to log out and shut down hardware.
+                            AppSession.Clear();
+                            this.Hide();
                         }
 
-                        
+
                     }
                 }
             }

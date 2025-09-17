@@ -22,13 +22,14 @@ namespace NV22SpectralInteg
                 System.Threading.Thread.Sleep(3000);
             }
 
-           
+
 
             //var dummyRequestBean = new LocalRequestBean
             //{
             //    operation = "bankadd",
             //    kioskTotalAmount = 100.00m,
             //    feeAmount = 8.00m,
+            //    isSucceed = true
             //};
 
             //var printer = new ReceiptPrinter(dummyRequestBean);
