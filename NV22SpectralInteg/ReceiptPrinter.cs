@@ -151,7 +151,7 @@ namespace BCSKioskServerCrypto
                 y += lineHeight;
 
                 // --- STATUS / WALLET INFO ---
-                string statusLabel = "Description: ";
+                string statusLabel = "Message: ";
                 e.Graphics.DrawString(statusLabel, boldFont, Brushes.Black, receiptX, y);
                 labelWidth = e.Graphics.MeasureString(statusLabel, boldFont).Width;
 
@@ -193,113 +193,7 @@ namespace BCSKioskServerCrypto
 
                 Logger.Log("✅ [PrintDocument_PrintPage Call] Ending...");
             }
-            //else
-            //{
-            //    // Existing logic for other operations ("buy", "claim", "storesettlement")
-            //    if (localRequestBean.operation == "buy")
-            //    {
-            //        e.Graphics.DrawString("***** BUY CLOUD SPACE *****", new Font("Arial", 12, FontStyle.Bold), Brushes.Black, x, y);
-            //        y += lineHeight + 10;
-            //        e.Graphics.DrawString("***** &     *****", new Font("Arial", 12, FontStyle.Bold), Brushes.Black, x, y);
-            //        y += lineHeight + 10;
-            //        e.Graphics.DrawString("***** GET FREE PLAY *****", new Font("Arial", 12, FontStyle.Bold), Brushes.Black, x, y);
-            //    }
-            //    else if (localRequestBean.operation == "claim")
-            //    {
-            //        e.Graphics.DrawString("***** CLAIM THE PRIZE *****", new Font("Arial", 12, FontStyle.Bold), Brushes.Black, x, y);
-            //    }
-
-            //    // Rest of the existing logic...
-            //    y += lineHeight + 20;
-            //    e.Graphics.DrawString("LOCATION:" + localRequestBean.address, font, Brushes.Black, x, y);
-            //    y += lineHeight + 10;
-            //    e.Graphics.DrawString(localRequestBean.city + " " + localRequestBean.zipCode, font, Brushes.Black, x, y);
-            //    y += lineHeight + 20;
-            //    e.Graphics.DrawString("DATE & TIME:" + DateTime.Now.ToString("yyyy/MM/dd hh:mm tt"), font, Brushes.Black, x, y);
-            //    y += lineHeight + 10;
-            //    e.Graphics.DrawString("RECIEPT ID: " + localRequestBean.transactionId, font, Brushes.Black, x, y);
-            //    y += lineHeight + 10;
-            //    e.Graphics.DrawString((localRequestBean.operation == "buy" ? "AMOUNT: " : "PRIZE CLAIMED: ") + localRequestBean.amount, font, Brushes.Black, x, y);
-            //    y += lineHeight + 10;
-            //    if (localRequestBean.operation == "buy")
-            //    {
-            //        e.Graphics.DrawString("CLOUD SPACE: " + localRequestBean.amount + " MB ", font, Brushes.Black, x, y);
-            //        y += lineHeight + 10;
-            //    }
-            //    else if (localRequestBean.operation == "claim" && SessionManager.vendor == "ATIBCS")
-            //    {
-            //        e.Graphics.DrawString("BCS TRANSACTION FEES: -" + localRequestBean.bcsFee, font, Brushes.Black, x, y);
-            //        y += lineHeight + 10;
-            //        if (localRequestBean.gameTipFee > 0)
-            //        {
-            //            e.Graphics.DrawString("GAME TIP: -" + localRequestBean.gameTipFee, font, Brushes.Black, x, y);
-            //            y += lineHeight + 10;
-            //        }
-            //        e.Graphics.DrawString("TOTAL PRIZE: " + localRequestBean.redeemableAmount, font, Brushes.Black, x, y);
-            //        y += lineHeight + 10;
-
-            //        byte[] imageBytes = Convert.FromBase64String(localRequestBean.paymentQRCode);
-            //        using (MemoryStream ms = new MemoryStream(imageBytes))
-            //        {
-            //            claimBTCQR = Image.FromStream(ms);
-            //            if (claimBTCQR != null)
-            //            {
-            //                e.Graphics.DrawString("***** SCAN BELOW QR CODE *****", new Font("Arial", 12, FontStyle.Bold), Brushes.Black, x, y);
-            //                y += lineHeight + 10;
-            //                e.Graphics.DrawString("***** TO RECEIVE PRIZE  *****", new Font("Arial", 12, FontStyle.Bold), Brushes.Black, x, y);
-            //                y += lineHeight + 10;
-            //                e.Graphics.DrawImage(claimBTCQR, x, y, claimBTCQR.Width - 250, claimBTCQR.Height - 250);
-            //                y += 260;
-            //                e.Graphics.DrawString("ABOVE QR CODE IS VALID FOR 6 HOURS FROM NOW", new Font("Arial", 11, FontStyle.Bold), Brushes.Black, x, y);
-            //                y += lineHeight + 10;
-            //                e.Graphics.DrawString("***************", new Font("Arial", 12, FontStyle.Bold), Brushes.Black, x, y);
-            //                y += lineHeight + 10;
-            //            }
-            //        }
-            //    }
-            //    e.Graphics.DrawString("PROMOTIONAL GAME: " + localRequestBean.gameName, font, Brushes.Black, x, y);
-            //    y += lineHeight + 20;
-            //    if (localRequestBean.operation == "buy")
-            //    {
-            //        e.Graphics.DrawString("***** CLOUD SPACE ACCESS *****", new Font("Arial", 12, FontStyle.Bold), Brushes.Black, x, y);
-            //        y += lineHeight + 20;
-            //        e.Graphics.DrawString("https://bitcloudsweeps.com", font, Brushes.Black, x, y);
-            //        y += lineHeight + 10;
-            //        e.Graphics.DrawString("IDN NUMBER: " + localRequestBean.idnNo, font, Brushes.Black, x, y);
-            //        if (localRequestBean.mode == "new")
-            //        {
-            //            y += lineHeight + 10;
-            //            e.Graphics.DrawString("PIN: " + localRequestBean.pin, font, Brushes.Black, x, y);
-            //        }
-            //        y += lineHeight + 20;
-            //        if (localRequestBean.gameURL != null && localRequestBean.gameURL != "")
-            //        {
-            //            e.Graphics.DrawString("***** PROMOTIONAL *****", new Font("Arial", 12, FontStyle.Bold), Brushes.Black, x, y);
-            //            y += lineHeight + 10;
-            //            e.Graphics.DrawString("***** GAME ACCESS *****", new Font("Arial", 12, FontStyle.Bold), Brushes.Black, x, y);
-            //            y += lineHeight + 10;
-            //            gameQR = generateQRCode(localRequestBean.gameURL);
-            //            e.Graphics.DrawImage(gameQR, x, y, gameQR.Width - 80, gameQR.Height - 70);
-            //            y += gameQR.Height - 40;
-
-            //            e.Graphics.DrawString("ACCOUNT: " + localRequestBean.gamePlayerId, font, Brushes.Black, x, y);
-            //            y += lineHeight + 10;
-            //            if (localRequestBean.mode == "new")
-            //            {
-            //                e.Graphics.DrawString("PASSWORD: " + localRequestBean.gamePassword, font, Brushes.Black, x, y);
-            //                y += lineHeight + 20;
-            //            }
-            //        }
-            //    }
-            //    e.Graphics.DrawString("Terms and conditions; you have already-", new Font("Arial", 10, FontStyle.Bold), Brushes.Black, x, y);
-            //    y += lineHeight + 10;
-            //    e.Graphics.DrawString("accepted prior of this purchase is–", new Font("Arial", 10, FontStyle.Bold), Brushes.Black, x, y);
-            //    y += lineHeight + 10;
-            //    e.Graphics.DrawString("available for your review on below link.", new Font("Arial", 10, FontStyle.Bold), Brushes.Black, x, y);
-            //    y += lineHeight + 10;
-            //    e.Graphics.DrawString("https://grews.s3.amazonaws.com/bcs/privacypolicy.pdf", new Font("Arial", 6, FontStyle.Bold), Brushes.Black, x, y);
-            //}
-
+           
             e.HasMorePages = false;
         }
         public bool printReceipt()
@@ -309,10 +203,10 @@ namespace BCSKioskServerCrypto
                 Logger.Log("🚀 [printReceipt Call] Starting...");
 
                 int receiptHeight = CalculateReceiptHeight();
-                PaperSize paperSize = new PaperSize("CustomReceipt", 280, receiptHeight + 10); // 2.8" wide
+                PaperSize paperSize = new PaperSize("CustomReceipt", 280, receiptHeight ); // 2.8" wide
                 printDocument.DefaultPageSettings.PaperSize = paperSize;
                 
-                printPreviewDialog.ShowDialog();
+                //printPreviewDialog.ShowDialog();
                 printDocument.Print();
                 // SessionManager.status = true; // Not defined in the provided code
                 Logger.Log("✅ [printReceipt Call] Completed...");
@@ -329,7 +223,7 @@ namespace BCSKioskServerCrypto
         private int CalculateReceiptHeight()
         {
             int receiptWidth = 280; // Adjusted for 3-inch printer
-            int totalHeight = 20;   // Top padding
+            int totalHeight = 15;   // Top padding
 
             using (Bitmap dummyBitmap = new Bitmap(1, 1))
             using (Graphics g = Graphics.FromImage(dummyBitmap))
@@ -383,12 +277,12 @@ namespace BCSKioskServerCrypto
                     SizeF disclaimerSize = g.MeasureString(disclaimer, font, receiptWidth - 20);
                     totalHeight += (int)disclaimerSize.Height + 10;
                 }
-                else
-                {
+                //else
+                //{
                     string notice = "Your cash was not converted. Please request a refund at the point of purchase. For assistance, contact PocketMint.AI Support.";
                     SizeF noticeSize = g.MeasureString(notice, font, receiptWidth - 20);
                     totalHeight += (int)noticeSize.Height + 10;
-                }
+                //}
 
                 // --- Bottom padding ---
                 totalHeight += 3 * lineHeight;
