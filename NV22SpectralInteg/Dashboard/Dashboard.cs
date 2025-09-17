@@ -302,14 +302,14 @@ namespace NV22SpectralInteg.Dashboard
                     //    kioskId = 1,
                     //    kioskRegId = 30,
                     //    customerRegId = 27,
-                    //    kioskTotalAmount = 1000,
+                    //    kioskTotalAmount = 10,
                     //    amountDetails = new[]
                     //    {
                     //        new
                     //        {
-                    //            denomination = 1000,
+                    //            denomination = 10,
                     //            count = 1,
-                    //            total = 1000
+                    //            total = 10
                     //        }
                     //    }
                     //};
@@ -350,7 +350,8 @@ namespace NV22SpectralInteg.Dashboard
                             operation = "bankadd",
                             kioskTotalAmount = kioskTotalAmount,
                             feeAmount = result.cryptoConversionFee ?? 0.00m,
-                            isSucceed = result.isSucceed
+                            isSucceed = result.isSucceed,
+                            printmessage = result.message
                         };
 
                         Logger.Log("🚀 ReceiptPrinter constructor call...");
@@ -389,7 +390,8 @@ namespace NV22SpectralInteg.Dashboard
                             operation = "bankadd",
                             kioskTotalAmount = kioskTotalAmount,
                             feeAmount = result.cryptoConversionFee,
-                            isSucceed = result.isSucceed
+                            isSucceed = result.isSucceed,
+                            printmessage = result.message
                         };
 
                         Logger.Log("🚀 ReceiptPrinter constructor call...");

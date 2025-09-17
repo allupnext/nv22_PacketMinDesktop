@@ -13,6 +13,7 @@ namespace BCSKioskServerCrypto
         public decimal kioskTotalAmount { get; set; }
         public decimal feeAmount { get; set; }
         public bool isSucceed { get; set; }
+        public string printmessage { get; set; }
     }
 
     
@@ -308,10 +309,10 @@ namespace BCSKioskServerCrypto
                 Logger.Log("🚀 [printReceipt Call] Starting...");
 
                 int receiptHeight = CalculateReceiptHeight();
-                PaperSize paperSize = new PaperSize("CustomReceipt", 280, receiptHeight); // 2.8" wide
+                PaperSize paperSize = new PaperSize("CustomReceipt", 280, receiptHeight + 10); // 2.8" wide
                 printDocument.DefaultPageSettings.PaperSize = paperSize;
                 
-                //printPreviewDialog.ShowDialog();
+                printPreviewDialog.ShowDialog();
                 printDocument.Print();
                 // SessionManager.status = true; // Not defined in the provided code
                 Logger.Log("✅ [printReceipt Call] Completed...");
