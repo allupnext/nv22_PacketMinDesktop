@@ -150,13 +150,11 @@ namespace BCSKioskServerCrypto
                 y += lineHeight;
 
                 // --- STATUS / WALLET INFO ---
-                string statusLabel = "Descrption: ";
+                string statusLabel = "Description: ";
                 e.Graphics.DrawString(statusLabel, boldFont, Brushes.Black, receiptX, y);
                 labelWidth = e.Graphics.MeasureString(statusLabel, boldFont).Width;
 
-                string statusValue = localRequestBean.isSucceed
-                    ? $"✅ Successfully deposited {(localRequestBean.kioskTotalAmount - localRequestBean.feeAmount):F2} USDT into the wallet ending with {AppSession.CustomerMobile.Substring(AppSession.CustomerMobile.Length - 4)}."
-                    : $"❌ Transaction unsuccessful. Funds were not deposited into the wallet ending with {AppSession.CustomerMobile.Substring(AppSession.CustomerMobile.Length - 4)}.";
+                string statusValue = localRequestBean.printmessage;
                 RectangleF statusRect = new RectangleF(receiptX + labelWidth, y, e.PageBounds.Width - (2 * receiptX) - labelWidth, 100);
                 e.Graphics.DrawString(statusValue, font, Brushes.Black, statusRect);
                 SizeF statusSize = e.Graphics.MeasureString(statusValue, font, (int)(e.PageBounds.Width - (2 * receiptX) - labelWidth));
