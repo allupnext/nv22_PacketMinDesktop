@@ -349,7 +349,7 @@ namespace NV22SpectralInteg.Dashboard
                         {
                             operation = "bankadd",
                             kioskTotalAmount = kioskTotalAmount,
-                            feeAmount = result.cryptoConversionFee ?? 0.00m,
+                            feeAmount = result.data.cryptoConversionFee ?? 0.00m,
                             isSucceed = result.isSucceed,
                             printmessage = result.message
                         };
@@ -378,18 +378,18 @@ namespace NV22SpectralInteg.Dashboard
                     }
                     else
                     {
-                        AppSession.StoreBalance = result.balance;
+                        AppSession.StoreBalance = result.data.storeBalance;
                         Logger.Log("💰 StoreBalance is " + AppSession.StoreBalance);
 
                         // This block runs ONLY if the API call was successful.
                         Logger.Log("✅ Transaction succeeded!");
-                        Logger.Log($"💳 New {AppSession.CustomerBALANCE}'s balance: {result.userBalance}");
+                        Logger.Log($"💳 New {AppSession.CustomerBALANCE}'s balance: {result.data.userBalance}");
 
                         var receiptData = new LocalRequestBean
                         {
                             operation = "bankadd",
                             kioskTotalAmount = kioskTotalAmount,
-                            feeAmount = result.cryptoConversionFee,
+                            feeAmount = result.data.cryptoConversionFee,
                             isSucceed = result.isSucceed,
                             printmessage = result.message
                         };
@@ -405,7 +405,7 @@ namespace NV22SpectralInteg.Dashboard
 
                         try
                         {
-                            string rawBalance = result.userBalance?.ToString() ?? "$0.00";
+                            string rawBalance = result.data.userBalance?.ToString() ?? "$0.00";
                             if (decimal.TryParse(rawBalance, out decimal newBalance))
                             {
                                 AppSession.CustomerBALANCE = newBalance;

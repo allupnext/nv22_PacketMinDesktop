@@ -619,9 +619,38 @@ namespace NV22SpectralInteg.Login
                             dashboard.Close();
                         }
                         else
-                        {
+                        { 
+
+                            try
+                            {
+                                // Get the full path to the JSON file
+                                string configPath = Path.Combine(Application.StartupPath, "config.json");
+
+                                // Read the entire file into a string
+                                string jsonContent = File.ReadAllText(configPath);
+
+                                // Deserialize the JSON string into an object
+                                AppConfig config = JsonConvert.DeserializeObject<AppConfig>(jsonContent);
+
+                                // Access the ComPort key from the deserialized object and assign it
+                                if (config != null)
+                                {
+                                    Global.ComPort = config.ComPort;
+                                    Logger.Log($"ComPort set from config file: {Global.ComPort}");
+                                }
+                                else
+                                {
+                                    // Handle the case where deserialization fails
+                                    Logger.LogError("Failed to deserialize config.json.", new InvalidOperationException("JSON file is empty or malformed."));
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                // Log or handle any file reading or deserialization errors
+                                Logger.LogError("Error reading config.json.", ex);
+                            }
+
                             Logger.Log("Privacy Policy accepted ✅");
-                            Global.ComPort = "COM7";
                             dashboard.MainLoop();
                         }
                     }

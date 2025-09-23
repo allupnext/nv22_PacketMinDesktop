@@ -3,7 +3,7 @@
 "VSVersion" = "3:800"
 "ProjectType" = "8:{978C614F-708E-4E1A-B201-565925725DBA}"
 "IsWebType" = "8:FALSE"
-"ProjectName" = "8:eSSP_example_Setup"
+"ProjectName" = "8:PocketMint"
 "LanguageId" = "3:1033"
 "CodePage" = "3:1252"
 "UILanguageId" = "3:1033"
@@ -394,7 +394,7 @@
             }
             "{3C67513D-01DD-4637-8A68-80971EB9504F}:_DCF1E7A5B5044B1A8A4FBFA66D7C0F9C"
             {
-            "DefaultLocation" = "8:[ProgramFilesFolder][Manufacturer]\\[ProductName]"
+            "DefaultLocation" = "8:C:\\Program Files\\PocketMint\\"
             "Name" = "8:#1925"
             "AlwaysCreate" = "11:FALSE"
             "Condition" = "8:"
@@ -574,7 +574,7 @@
         }
         "Shortcut"
         {
-            "{970C0BB2-C7D0-45D7-ABFA-7EC378858BC0}:_3A94C6E4D23346F0A26C264908923544"
+            "{970C0BB2-C7D0-45D7-ABFA-7EC378858BC0}:_6B0D2B9ED98C4BF6AFBC8FCA2833C1A2"
             {
             "Name" = "8:PocketMint"
             "Arguments" = "8:"

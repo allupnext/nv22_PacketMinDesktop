@@ -1,4 +1,4 @@
-using BCSKioskServerCrypto;
+﻿using BCSKioskServerCrypto;
 using NV22SpectralInteg.Login;
 
 namespace NV22SpectralInteg
