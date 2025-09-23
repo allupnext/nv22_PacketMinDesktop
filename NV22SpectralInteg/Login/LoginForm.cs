@@ -13,6 +13,7 @@ using System.Windows.Forms;
 using NV22SpectralInteg.Services;
 using System.Runtime.InteropServices;
 using NV22SpectralInteg.NumPad;
+using NV22SpectralInteg.InactivityManager;
 
 namespace NV22SpectralInteg.Login
 {
@@ -516,6 +517,9 @@ namespace NV22SpectralInteg.Login
         private async void LoginButton_Click(object sender, EventArgs e)
         {
             Logger.Log("Login button clicked (Send OTP) 🔑");
+            Logger.Log("✨ Start KioskIdleManager");
+            KioskIdleManager.Start(10);
+
             currentNumpad.Close();
 
             if (string.IsNullOrEmpty(phoneTextBox.Text))
