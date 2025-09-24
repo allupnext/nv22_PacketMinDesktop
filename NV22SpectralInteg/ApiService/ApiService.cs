@@ -13,8 +13,7 @@ public static class ApiService
     private static readonly HttpClient client = new HttpClient();
     internal const string BaseUrl = "https://uat.pocketmint.ai/api/kiosks";
     internal const string AuthToken = "a55cf4p6-e57a-3w20-8ag4-33s55d27ev78";
-    private const string mode = "development";
-    //private const string mode = "live";
+    private static string Status = "live";
 
     static ApiService()
     {
@@ -25,12 +24,21 @@ public static class ApiService
         client.DefaultRequestHeaders.Add("Authorization", AuthToken);
     }
 
+    // New method to initialize the service with your config
+    public static void Initialize(AppConfig config)
+    {
+        // Use a ternary operator to set the status string in one line.
+        Status = config.IsDevelopment ? "development" : "live";
+        Logger.Log($"ApiService initialized in '{Status}' mode.");
+    }
+
+
     // NOTE: This is a simplified example. In a real app, you would have proper response models
     // instead of 'dynamic' to ensure type safety.
 
     public static async Task<(bool Success, string ErrorMessage)> ValidateAndSetKioskSessionAsync(string kioskId)
     {
-        if(mode != "development")
+        if(Status == "live")
         {
             string apiUrl = $"{BaseUrl}/get/kiosks/details";
             try
@@ -78,7 +86,7 @@ public static class ApiService
     public static async Task<bool> SendOtpAsync(string mobileNo)
     {
         // For demonstration, returning true. Uncomment your real logic here.
-        if (mode != "development")
+        if (Status == "live")
         {
 
             string apiUrl = $"{BaseUrl}/send/user/mobileno/otp";
@@ -120,7 +128,7 @@ public static class ApiService
     {
         // For demonstration, returning true. Uncomment your real logic here.
 
-        if (mode != "development")
+        if (Status == "live")
         {
             string apiUrl = $"{BaseUrl}/validate/user/mobileno/otp";
             try

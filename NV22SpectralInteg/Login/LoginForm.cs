@@ -22,7 +22,8 @@ namespace NV22SpectralInteg.Login
         private PictureBox titleImage;
         private Label subtitle;
         private Panel controlBoxPanel;
-        private readonly bool isDevelopment = false;
+        private readonly AppConfig config;
+        private readonly bool isDevelopment;
 
         private Panel kioskPanel;
         private Panel loginPanel;
@@ -53,6 +54,29 @@ namespace NV22SpectralInteg.Login
         private CValidator validator;
         public LoginForm()
         {
+            try
+            {
+                // Get the full path to the JSON file
+                string configPath = Path.Combine(Application.StartupPath, "config.json");
+                // Read the entire file into a string
+                string jsonContent = File.ReadAllText(configPath);
+                // Deserialize the JSON string into the class field
+                this.config = JsonConvert.DeserializeObject<AppConfig>(jsonContent);
+                // Initialize the isDevelopment field from the config
+                this.isDevelopment = this.config.IsDevelopment;
+            }
+            catch (Exception ex)
+            {
+                // Handle errors if the config file is missing or corrupt
+                MessageBox.Show($"Error loading configuration: {ex.Message}");
+                // Set a default value if loading fails
+                this.isDevelopment = true;  
+            }
+
+
+            Logger.Log("🛑 In LoginForm Stopping any existing KioskIdleManager instance before starting a new one.");
+            KioskIdleManager.Stop();
+            
             Logger.Log("LoginForm initialized 🚀");
             InitializeComponent();
             InitializeCountryCodes();
@@ -89,12 +113,8 @@ namespace NV22SpectralInteg.Login
             this.FormBorderStyle = FormBorderStyle.None;
             this.StartPosition = FormStartPosition.CenterScreen;
 
-            if (isDevelopment)
-            {
-                AddCustomControlBox();
-            }
 
-            loginPanel = new Panel
+                loginPanel = new Panel
             {
                 Size = new Size(500, 700),
                 BackColor = Color.Transparent
@@ -104,13 +124,11 @@ namespace NV22SpectralInteg.Login
             this.Load += (s, e) =>
             {
                 CenterLoginUI(loginPanel);
-                if (isDevelopment) PositionControlBox();
             };
 
             this.Resize += (s, e) =>
             {
                 CenterLoginUI(loginPanel);
-                if (isDevelopment) PositionControlBox();
             };
 
             stackPanel = new FlowLayoutPanel
@@ -180,7 +198,7 @@ namespace NV22SpectralInteg.Login
             phonePrefix = new Label
             {
                 // --- NOTE: Your code correctly sets "+91". The screenshot might be from an older version. ---
-                Text = "+91",
+                Text = isDevelopment ? "+91" : "+1",
                 Width = 80,
                 Height = 40,
                 TextAlign = ContentAlignment.MiddleCenter,
@@ -250,7 +268,7 @@ namespace NV22SpectralInteg.Login
 
             phoneTextBox = new TextBox
             {
-                Text = "7283957717",
+                Text = isDevelopment ? "7283957717" : "",
                 BorderStyle = BorderStyle.None,
                 BackColor = ColorTranslator.FromHtml("#222223"),
                 ForeColor = Color.White,
@@ -517,9 +535,6 @@ namespace NV22SpectralInteg.Login
         private async void LoginButton_Click(object sender, EventArgs e)
         {
             Logger.Log("Login button clicked (Send OTP) 🔑");
-            Logger.Log("✨ Start KioskIdleManager");
-            KioskIdleManager.Start(10);
-
             currentNumpad.Close();
 
             if (string.IsNullOrEmpty(phoneTextBox.Text))
@@ -548,6 +563,9 @@ namespace NV22SpectralInteg.Login
             {
                 Logger.Log("OTP sent successfully. Showing OTP verification controls. ✅");
 
+                Logger.Log("✨ In Login OTP sent so Starting KioskIdleManager with 10-second timeout for OTP screen.");
+                KioskIdleManager.Start(10);
+
                 // Hide ONLY the login button
                 loginButton.Visible = false;
 
@@ -571,6 +589,11 @@ namespace NV22SpectralInteg.Login
                 string errMsg = $"Failed to send OTP to: {fullMobileNumber} ❌";
                 Logger.LogError(errMsg, new Exception("OTP sending API returned false."));
                 MessageBox.Show("Invalid mobile number or failed to send OTP. Please try after some time.", "Validation Failed", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                // Optional: If sending the OTP fails, you might want to restart the timer
+                // with the original short timeout.
+
+                Logger.Log("✨ In Login OTP failed so Starting KioskIdleManager with 10-second timeout for OTP screen.");
+                KioskIdleManager.Start(10);
             }
         }
 
@@ -624,17 +647,10 @@ namespace NV22SpectralInteg.Login
                         }
                         else
                         { 
-
+                            Logger.Log("✨ In Dashboard Stopping KioskIdleManager before entering main dashboard.");
+                            KioskIdleManager.Stop();
                             try
                             {
-                                // Get the full path to the JSON file
-                                string configPath = Path.Combine(Application.StartupPath, "config.json");
-
-                                // Read the entire file into a string
-                                string jsonContent = File.ReadAllText(configPath);
-
-                                // Deserialize the JSON string into an object
-                                AppConfig config = JsonConvert.DeserializeObject<AppConfig>(jsonContent);
 
                                 // Access the ComPort key from the deserialized object and assign it
                                 if (config != null)
@@ -681,6 +697,8 @@ namespace NV22SpectralInteg.Login
         public void ResetToLogin()
         {
             Logger.Log("Resetting login form to initial state 🔄");
+            Logger.Log("✨ In ResetToLogin Stopping KioskIdleManager");
+            KioskIdleManager.Stop();
 
             // Reset the main title
             subtitle.Text = "Login";
@@ -836,60 +854,6 @@ namespace NV22SpectralInteg.Login
         }
 
        
-        private void AddCustomControlBox()
-        {
-            controlBoxPanel = new Panel
-            {
-                Width = 100,
-                Height = 40,
-                BackColor = Color.Transparent
-            };
-
-            var minimizeButton = new Label
-            {
-                Text = "—",
-                Font = new Font("Poppins", 14, FontStyle.Bold),
-                ForeColor = Color.White,
-                TextAlign = ContentAlignment.MiddleCenter,
-                Width = 40,
-                Height = 40,
-                Cursor = Cursors.Hand,
-                Dock = DockStyle.Left
-            };
-            minimizeButton.Click += (s, e) => this.WindowState = FormWindowState.Minimized;
-            minimizeButton.MouseEnter += (s, e) => minimizeButton.ForeColor = Color.Gray;
-            minimizeButton.MouseLeave += (s, e) => minimizeButton.ForeColor = Color.White;
-            controlBoxPanel.Controls.Add(minimizeButton);
-
-            var closeButton = new Label
-            {
-                Text = "✕",
-                Font = new Font("Poppins", 14, FontStyle.Bold),
-                ForeColor = Color.White,
-                TextAlign = ContentAlignment.MiddleCenter,
-                Width = 40,
-                Height = 40,
-                Cursor = Cursors.Hand,
-                Dock = DockStyle.Right
-            };
-            closeButton.Click += (s, e) => this.Close();
-            closeButton.MouseEnter += (s, e) => closeButton.ForeColor = Color.Red;
-            closeButton.MouseLeave += (s, e) => closeButton.ForeColor = Color.White;
-            controlBoxPanel.Controls.Add(closeButton);
-
-            this.Controls.Add(controlBoxPanel);
-        }
-
-        private void PositionControlBox()
-        {
-            if (controlBoxPanel != null)
-            {
-                controlBoxPanel.Top = 10;
-                controlBoxPanel.Left = this.ClientSize.Width - controlBoxPanel.Width - 10;
-                controlBoxPanel.BringToFront();
-            }
-        }
-
 
         private void StartTimer()
         {
@@ -1007,7 +971,7 @@ namespace NV22SpectralInteg.Login
 
             var kioskTextBox = new TextBox
             {
-                Text = "1",
+                Text = isDevelopment ? "1" : "",
                 Font = new Font("Poppins", 11),
                 BorderStyle = BorderStyle.None,
                 Dock = DockStyle.Fill,

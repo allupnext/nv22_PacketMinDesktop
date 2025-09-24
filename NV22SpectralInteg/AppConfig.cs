@@ -9,5 +9,6 @@ namespace NV22SpectralInteg
     public class AppConfig
     {
         public string ComPort { get; set; }
+        public bool IsDevelopment { get; set; }
     }
 }

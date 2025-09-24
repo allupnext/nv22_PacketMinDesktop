@@ -18,7 +18,6 @@ namespace NV22SpectralInteg.InactivityManager
         {
             // Changed this call to the new method name
             SetupControls();
-            PositionWindow();
         }
 
         // Renamed this method to avoid conflict with the designer's method
@@ -45,7 +44,6 @@ namespace NV22SpectralInteg.InactivityManager
             this.FormBorderStyle = FormBorderStyle.None;
             this.Name = "CountdownForm";
             this.Text = "Inactivity Warning";
-            this.TopMost = true; // Always on top
             this.ShowInTaskbar = false; // Don't show in the taskbar
             this.ResumeLayout(false);
         }
@@ -53,12 +51,17 @@ namespace NV22SpectralInteg.InactivityManager
         /// <summary>
         /// Positions the form in the bottom-right corner of the primary screen.
         /// </summary>
-        private void PositionWindow()
+        public void PositionWindow(Form owner) // <-- MODIFIED to accept the owner form
         {
-            Rectangle workingArea = Screen.PrimaryScreen.WorkingArea;
-            this.Left = workingArea.Right - this.Width - 10; // 10px margin
-            this.Top = workingArea.Bottom - this.Height - 10; // 10px margin
+            // Get the screen the owner form is currently on, not just the primary one.
+            Screen activeScreen = Screen.FromControl(owner);
+            Rectangle workingArea = activeScreen.WorkingArea;
+
+            // Position the form in the bottom-right corner with a 10px margin.
+            this.Left = workingArea.Right - this.Width - 20;
+            this.Top = workingArea.Bottom - this.Height + 15;
         }
+
 
         /// <summary>
         /// Updates the text displayed on the form.

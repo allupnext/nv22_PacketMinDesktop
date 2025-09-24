@@ -27,6 +27,9 @@ namespace NV22SpectralInteg.InactivityManager
         private static Action _logoutAction;
         private static ActivityMessageFilter _messageFilter;
 
+        private static bool _isStarted = false;
+        private static bool _isCountingDown = false;
+
         /// <summary>
         /// Initializes the InactivityManager. Must be called once when the application starts.
         /// </summary>
@@ -38,7 +41,7 @@ namespace NV22SpectralInteg.InactivityManager
             _inactivityTimer = new System.Windows.Forms.Timer();
             _inactivityTimer.Tick += InactivityTimer_Tick;
 
-            _countdownTimer = new System.Windows.Forms.Timer { Interval = 1000 }; // Ticks every second
+            _countdownTimer = new System.Windows.Forms.Timer { Interval = 1000 };
             _countdownTimer.Tick += CountdownTimer_Tick;
 
             _messageFilter = new ActivityMessageFilter();
@@ -52,7 +55,15 @@ namespace NV22SpectralInteg.InactivityManager
         /// <param name="timeoutSeconds">The number of seconds of inactivity before showing the warning.</param>
         public static void Start(int timeoutSeconds)
         {
-            _maxInactivitySeconds = timeoutSeconds;
+            if (timeoutSeconds <= 0)
+            {
+                Stop();
+                return; 
+            }
+
+             _maxInactivitySeconds = timeoutSeconds;
+            _isStarted = true;
+
             ResetTimer();
         }
 
@@ -61,6 +72,8 @@ namespace NV22SpectralInteg.InactivityManager
         /// </summary>
         public static void Stop()
         {
+            _isStarted = false;
+            _isCountingDown = false;
             _inactivityTimer.Stop();
             _countdownTimer.Stop();
             CloseCountdownForm();
@@ -71,9 +84,17 @@ namespace NV22SpectralInteg.InactivityManager
         /// </summary>
         public static void ResetTimer()
         {
+            if (!_isStarted)
+            {
+                return;
+            }
+
+            _isCountingDown = false;
+
             _countdownTimer.Stop();
             CloseCountdownForm();
 
+            _inactivityTimer.Stop();
             _inactivityTimer.Interval = _maxInactivitySeconds * 1000;
             _inactivityTimer.Start();
         }
@@ -84,7 +105,7 @@ namespace NV22SpectralInteg.InactivityManager
         private static void InactivityTimer_Tick(object sender, EventArgs e)
         {
             _inactivityTimer.Stop();
-
+            _isCountingDown = true;
             _currentCountdownValue = CountdownDurationSeconds;
             ShowCountdownForm();
             _countdownTimer.Start();
@@ -109,6 +130,7 @@ namespace NV22SpectralInteg.InactivityManager
             }
         }
 
+
         private static void ShowCountdownForm()
         {
             if (_countdownForm == null || _countdownForm.IsDisposed)
@@ -116,7 +138,25 @@ namespace NV22SpectralInteg.InactivityManager
                 _countdownForm = new CountdownForm();
             }
             _countdownForm.UpdateMessage($"Logging out in {CountdownDurationSeconds} seconds...");
-            _countdownForm.Show();
+
+            if (_countdownForm.Visible)
+            {
+                return;
+            }
+
+            // Find the main visible form to act as the owner.
+            Form ownerForm = Application.OpenForms.Cast<Form>().FirstOrDefault(f => f.Visible);
+
+            if (ownerForm != null)
+            {
+                _countdownForm.Show(ownerForm);
+                _countdownForm.PositionWindow(ownerForm);
+            }
+            else
+            {
+                // Fallback in case no owner is found
+                _countdownForm.Show();
+            }
         }
 
         private static void CloseCountdownForm()
@@ -132,19 +172,42 @@ namespace NV22SpectralInteg.InactivityManager
         /// </summary>
         private class ActivityMessageFilter : IMessageFilter
         {
-            // --- MODIFIED: Use WM_POINTERDOWN for robust touch/pen/mouse detection ---
-            // This is the modern, unified message for any "down" action on the screen.
+            // --- Win32 Message Constants ---
+            private const int WM_KEYDOWN = 0x0100;
+            private const int WM_MOUSEMOVE = 0x0200;
+            private const int WM_LBUTTONDOWN = 0x0201;
+            private const int WM_RBUTTONDOWN = 0x0204;
             private const int WM_POINTERDOWN = 0x0246;
-            //private const int WM_KEYDOWN = 0x0100;
-            //private const int WM_MOUSEMOVE = 0x0200;
+
+            // This will store the last recorded cursor position.
+            private static Point _lastMousePosition = Point.Empty;
 
             public bool PreFilterMessage(ref Message m)
             {
-                // --- MODIFIED: The condition now checks for the pointer down message ---
-                if (m.Msg == WM_POINTERDOWN)
+                // For unambiguous actions like clicks or key presses, always reset the timer.
+                if (m.Msg == WM_KEYDOWN || m.Msg == WM_POINTERDOWN ||
+                    m.Msg == WM_LBUTTONDOWN || m.Msg == WM_RBUTTONDOWN)
                 {
                     KioskIdleManager.ResetTimer();
+                    return false;
                 }
+
+                // For mouse movement, we need to be smarter.
+                if (m.Msg == WM_MOUSEMOVE)
+                {
+                    Point currentMousePosition = Cursor.Position;
+
+                    // Only reset the timer if the cursor has actually moved.
+                    if (currentMousePosition != _lastMousePosition)
+                    {
+                        _lastMousePosition = currentMousePosition;
+                        KioskIdleManager.ResetTimer();
+                    }
+                    // If the position is the same, we do nothing because it's a phantom move.
+
+                    return false;
+                }
+
                 return false;
             }
         }

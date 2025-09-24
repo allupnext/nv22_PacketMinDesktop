@@ -1,6 +1,7 @@
 ﻿
 using ITLlib;
 using NV22SpectralInteg.Helpers;
+using NV22SpectralInteg.InactivityManager;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -726,6 +727,8 @@ namespace NV22SpectralInteg.Classes
                             break;
 
                         case CCommands.SSP_POLL_READ_NOTE:
+                            KioskIdleManager.ResetTimer();
+
                             if (m_cmd.ResponseData[i + 1] > 0)
                             {
                                 noteVal = GetChannelValue(m_cmd.ResponseData[i + 1]);

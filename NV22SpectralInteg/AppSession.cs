@@ -25,7 +25,6 @@ namespace NV22SpectralInteg
 
         public static void Clear()
         {
-            KioskId = null;
             KioskRegId = null;
             CustomerRegId = null;
             CustomerName = "None";

@@ -1,4 +1,5 @@
-﻿using NV22SpectralInteg.Login;
+﻿using NV22SpectralInteg.InactivityManager;
+using NV22SpectralInteg.Login;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -18,6 +19,11 @@ namespace NV22SpectralInteg.PrivacyPolicy
 
         public PrivacyPolicyWindow()
         {
+            Logger.Log("🛑 In PrivacyPolicyWindow Stopping any existing KioskIdleManager instance before starting a new one.");
+            KioskIdleManager.Stop();
+
+            Logger.Log("✨ In PrivacyPolicyWindow Starting KioskIdleManager with 10-second timeout for OTP screen.");
+            KioskIdleManager.Start(10);
             InitializeComponent();
             InitializeUI();
         }

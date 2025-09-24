@@ -1,3 +1,4 @@
 {
-  "ComPort": "COM7"
+  "ComPort": "COM7",
+  "IsDevelopment": false
 }

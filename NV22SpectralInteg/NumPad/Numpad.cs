@@ -38,9 +38,10 @@ namespace NV22SpectralInteg.NumPad
             this.ControlBox = false;
             this.StartPosition = FormStartPosition.Manual;
             this.BackColor = ColorTranslator.FromHtml("#1e1e1e");
-            this.Width = 360;
+            this.Width = 440;
             //this.Height = 480;
             this.Height = 280;
+            this.ShowInTaskbar = false; 
         }
 
         private void BuildNumpadUI(string target)

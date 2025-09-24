@@ -1,4 +1,5 @@
-﻿using NV22SpectralInteg.Login;
+﻿using NV22SpectralInteg.InactivityManager;
+using NV22SpectralInteg.Login;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -17,6 +18,12 @@ namespace NV22SpectralInteg.Dashboard
         // Constructor that accepts the name and amount to display
         public SuccessPopup(string recipientName, decimal amount, bool isSucceed, string message)
         {
+            Logger.Log("🛑 In SuccessPopup Stopping any existing KioskIdleManager instance before starting a new one.");
+            KioskIdleManager.Stop();
+
+            Logger.Log("✨ In SuccessPopup Starting KioskIdleManager with 10-second timeout for OTP screen.");
+            KioskIdleManager.Start(10);
+
             InitializeCustomComponents(recipientName, amount, isSucceed, message);
         }
 

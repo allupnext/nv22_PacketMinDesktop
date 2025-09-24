@@ -1,6 +1,7 @@
 ﻿using BCSKioskServerCrypto;
 using Newtonsoft.Json;
 using NV22SpectralInteg.Classes;
+using NV22SpectralInteg.InactivityManager;
 using NV22SpectralInteg.Login;
 using NV22SpectralInteg.Services;
 using System;
@@ -446,6 +447,125 @@ namespace NV22SpectralInteg.Dashboard
             }
         }
 
+        private async void PerformAutomaticLogout()
+        {
+            // Stop the main polling loop to prevent new notes from being inserted
+            this.Running = false;
+            Logger.Log("⏳ Inactivity timeout reached. Performing automatic logout check...");
+
+            // Process any transaction that might be pending
+            bool success = await ProcessTransactionAsync();
+
+            if (!success)
+            {
+                // If the API call fails, log a critical error. 
+                // Ideally, you would command the hardware to reject the notes back to the user here.
+                Logger.Log("CRITICAL: Automatic transaction failed! Notes might be stuck in escrow.");
+            }
+
+            // This part runs whether the transaction succeeded or failed.
+            // It safely switches back to the login screen on the UI thread.
+            this.Invoke((MethodInvoker)delegate {
+                stoprunning(); // Fully shut down the hardware
+                ResetForNewTransaction(); 
+                AppSession.Clear();
+                var login = new Login.LoginForm();
+                login.ResetToLogin();
+                login.Show();
+                login.Activate();
+                this.Close(); 
+            });
+        }
+        private async Task<bool> ProcessTransactionAsync()
+        {
+            // Safety check: If there's no money, there's nothing to do. Return success.
+            if (!_validator.NoteEscrowCounts.Any())
+            {
+                Logger.Log("ProcessTransactionAsync: No notes in escrow to process.");
+                return true;
+            }
+
+            try
+            {
+                using (var client = new HttpClient())
+                {
+                    string apiUrl = "https://uat.pocketmint.ai/api/kiosks/user/transaction/persist";
+
+                    var amountDetails = _validator.NoteEscrowCounts
+                        .Select(kvp =>
+                        {
+                            string key = kvp.Key;
+                            int count = kvp.Value;
+                            var denominationMatch = System.Text.RegularExpressions.Regex.Match(key, @"\d+");
+                            int denomination = denominationMatch.Success && int.TryParse(denominationMatch.Value, out var d) ? d : 0;
+                            return new { denomination, count, total = denomination * count };
+                        })
+                        .ToList();
+
+                    decimal kioskTotalAmount = amountDetails.Sum(a => a.total);
+
+                    var requestBody = new
+                    {
+                        kioskId = AppSession.KioskId,
+                        kioskRegId = AppSession.KioskRegId,
+                        customerRegId = AppSession.CustomerRegId,
+                        kioskTotalAmount = kioskTotalAmount,
+                        amountDetails = amountDetails
+                    };
+
+                 
+                    Logger.Log("📤 Sending transaction request to API...");
+                    string jsonPayload = JsonConvert.SerializeObject(requestBody);
+                    Logger.Log($"📦 Payload: {jsonPayload}");
+
+                    var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+
+                    client.DefaultRequestHeaders.Accept.Clear();
+                    client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                    client.DefaultRequestHeaders.UserAgent.ParseAdd("PostmanRuntime/7.35.0");
+                    client.DefaultRequestHeaders.Remove("Authorization");
+                    client.DefaultRequestHeaders.Add("Authorization", $"{ApiService.AuthToken}");
+                    client.DefaultRequestHeaders.Add("Cookie", "JSESSIONID=C4537CD8D22C7AF20A50A08992FD3EFF; Path=/; Secure; HttpOnly");
+
+                    HttpResponseMessage response = await client.PostAsync(apiUrl, content);
+                    string responseText = await response.Content.ReadAsStringAsync();
+                    Logger.Log($"📬 API Response: {responseText}");
+
+                    var result = JsonConvert.DeserializeObject<dynamic>(responseText);
+                    if (result != null && (bool)result.isSucceed)
+                    {
+                        var receiptData = new LocalRequestBean
+                        {
+                            operation = "bankadd",
+                            kioskTotalAmount = kioskTotalAmount,
+                            feeAmount = result.data.cryptoConversionFee,
+                            isSucceed = result.isSucceed,
+                            printmessage = result.message
+                        };
+
+                        Logger.Log("🚀 ReceiptPrinter constructor call...");
+                        // Call the print function
+                        var printer = new ReceiptPrinter(receiptData);
+                        Logger.Log("🚀 Print Receipt call...");
+                        printer.printReceipt();
+
+                        Logger.Log("✅ Transaction API call SUCCEEDED.");
+                        return true;
+                    }
+                    else
+                    {
+                        Logger.Log("❌ Transaction API call FAILED.");
+                        return false;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("🚨 Exception in ProcessTransactionAsync", ex);
+                return false;
+            }
+        }
+
         private void ResetForNewTransaction()
         {
             Logger.Log("🔄 Resetting dashboard for a new transaction...");
@@ -804,6 +924,12 @@ namespace NV22SpectralInteg.Dashboard
                 //    comboBoxComPorts.SelectedIndex = 0;
                 //    comboBoxComPorts.Enabled = false;
                 //}
+
+                // Tell the KioskIdleManager to use YOUR new logout method
+                KioskIdleManager.Initialize(this.PerformAutomaticLogout);
+                Logger.Log("✨ Starting KioskIdleManager for the main dash" +
+                    "board.");
+                KioskIdleManager.Start(10);
             }
             catch (Exception ex)
             {
@@ -988,6 +1114,7 @@ namespace NV22SpectralInteg.Dashboard
         {
             this.Hide();
             stoprunning();
+            AppSession.Clear();
             var login = new NV22SpectralInteg.Login.LoginForm();
             login.Show();
         }
