@@ -1,6 +1,8 @@
 ﻿using BCSKioskServerCrypto;
+using Newtonsoft.Json;
 using NV22SpectralInteg.InactivityManager;
 using NV22SpectralInteg.Login;
+using NV22SpectralInteg.Services;
 
 namespace NV22SpectralInteg
 {
@@ -17,6 +19,16 @@ namespace NV22SpectralInteg
             // To customize application configuration such as set high DPI settings or default font,
             // see https://aka.ms/applicationconfiguration.
             ApplicationConfiguration.Initialize();
+
+
+            string configPath = Path.Combine(Application.StartupPath, "config.json");
+            // Read the entire file into a string
+            string jsonContent = File.ReadAllText(configPath);
+            // Deserialize the JSON string into the class field
+            AppConfig config = JsonConvert.DeserializeObject<AppConfig>(jsonContent);
+            ApiService.Initialize(config);
+
+
 
             // It creates the timers and prepares the manager for use.
             KioskIdleManager.Initialize(PerformLogout);

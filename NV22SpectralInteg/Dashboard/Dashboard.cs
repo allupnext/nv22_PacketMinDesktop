@@ -363,8 +363,10 @@ namespace NV22SpectralInteg.Dashboard
 
                         var successPopup = new SuccessPopup(AppSession.CustomerName, currentGrandTotal, (bool)result.isSucceed, result.message.ToString());
                         successPopup.ShowDialog(this);
-                        
-                        
+
+                        Logger.Log("🛑 SuccessPopup (Failed) closed. Timer stopped.");
+                        KioskIdleManager.Stop();
+
                         // Now, handle the user's choice from the popup.
                         if (successPopup.DialogResult == DialogResult.Cancel)
                         {
@@ -404,6 +406,9 @@ namespace NV22SpectralInteg.Dashboard
                         var successPopup = new SuccessPopup(AppSession.CustomerName, currentGrandTotal, (bool)result.isSucceed, result.message.ToString());
                         successPopup.ShowDialog(this);
 
+                        Logger.Log("🛑 SuccessPopup (Succeeded) closed. Timer stopped.");
+                        KioskIdleManager.Stop();
+
                         try
                         {
                             string rawBalance = result.data.userBalance?.ToString() ?? "$0.00";
@@ -422,6 +427,9 @@ namespace NV22SpectralInteg.Dashboard
                         // Now, handle the user's choice from the popup.
                         if (successPopup.DialogResult == DialogResult.OK)
                         {
+                            Logger.Log("✨ Starting 10-second timer for new Dashboard transaction.");
+                            KioskIdleManager.Start(10);
+
                             UpdateBalanceDisplay();
                             ResetForNewTransaction();
                             MainLoop();
@@ -447,33 +455,35 @@ namespace NV22SpectralInteg.Dashboard
             }
         }
 
-        private async void PerformAutomaticLogout()
+        private void FinalizeAndReturnToLogin()
         {
-            // Stop the main polling loop to prevent new notes from being inserted
-            this.Running = false;
-            Logger.Log("⏳ Inactivity timeout reached. Performing automatic logout check...");
+            stoprunning();
+            AppSession.Clear();
+            KioskIdleManager.Stop();
 
-            // Process any transaction that might be pending
+            KioskIdleManager.Initialize(Program.PerformLogout); // Re-initialize with the correct method
+            var login = new NV22SpectralInteg.Login.LoginForm();
+            login.Show();
+
+            this.Hide();
+            this.Close();
+        }
+
+        internal async void PerformAutomaticLogout()
+        {
+            this.Running = false;
+            Logger.Log("⏳ Inactivity timeout reached. Processing final transaction...");
+
             bool success = await ProcessTransactionAsync();
 
             if (!success)
             {
-                // If the API call fails, log a critical error. 
-                // Ideally, you would command the hardware to reject the notes back to the user here.
                 Logger.Log("CRITICAL: Automatic transaction failed! Notes might be stuck in escrow.");
             }
 
-            // This part runs whether the transaction succeeded or failed.
-            // It safely switches back to the login screen on the UI thread.
+            // Now call the shared method on the UI thread
             this.Invoke((MethodInvoker)delegate {
-                stoprunning(); // Fully shut down the hardware
-                ResetForNewTransaction(); 
-                AppSession.Clear();
-                var login = new Login.LoginForm();
-                login.ResetToLogin();
-                login.Show();
-                login.Activate();
-                this.Close(); 
+                FinalizeAndReturnToLogin();
             });
         }
         private async Task<bool> ProcessTransactionAsync()
@@ -924,12 +934,6 @@ namespace NV22SpectralInteg.Dashboard
                 //    comboBoxComPorts.SelectedIndex = 0;
                 //    comboBoxComPorts.Enabled = false;
                 //}
-
-                // Tell the KioskIdleManager to use YOUR new logout method
-                KioskIdleManager.Initialize(this.PerformAutomaticLogout);
-                Logger.Log("✨ Starting KioskIdleManager for the main dash" +
-                    "board.");
-                KioskIdleManager.Start(10);
             }
             catch (Exception ex)
             {
@@ -1112,11 +1116,8 @@ namespace NV22SpectralInteg.Dashboard
 
         private void LogoutButton_Click(object sender, EventArgs e)
         {
-            this.Hide();
-            stoprunning();
-            AppSession.Clear();
-            var login = new NV22SpectralInteg.Login.LoginForm();
-            login.Show();
+            Logger.Log("Manual logout initiated by user.");
+            PerformAutomaticLogout();
         }
 
 

@@ -131,31 +131,33 @@ namespace NV22SpectralInteg.InactivityManager
         }
 
 
+        // In InactivityManager/KioskIdleManager.cs
+
         private static void ShowCountdownForm()
         {
             if (_countdownForm == null || _countdownForm.IsDisposed)
             {
                 _countdownForm = new CountdownForm();
             }
-            _countdownForm.UpdateMessage($"Logging out in {CountdownDurationSeconds} seconds...");
 
-            if (_countdownForm.Visible)
+            // ✅ SAFETY CHECK: Only try to show the form if it is not already visible.
+            if (!_countdownForm.Visible)
             {
-                return;
-            }
+                _countdownForm.UpdateMessage($"Logging out in {CountdownDurationSeconds} seconds...");
 
-            // Find the main visible form to act as the owner.
-            Form ownerForm = Application.OpenForms.Cast<Form>().FirstOrDefault(f => f.Visible);
+                Form ownerForm = Application.OpenForms.Cast<Form>().FirstOrDefault(f => f.Visible);
 
-            if (ownerForm != null)
-            {
-                _countdownForm.Show(ownerForm);
-                _countdownForm.PositionWindow(ownerForm);
-            }
-            else
-            {
-                // Fallback in case no owner is found
-                _countdownForm.Show();
+                if (ownerForm != null)
+                {
+                    // Using ShowDialog can sometimes be more stable for popups.
+                    // But we'll stick to Show() and rely on the visibility check.
+                    _countdownForm.Show(ownerForm);
+                    _countdownForm.PositionWindow(ownerForm);
+                }
+                else
+                {
+                    _countdownForm.Show();
+                }
             }
         }
 

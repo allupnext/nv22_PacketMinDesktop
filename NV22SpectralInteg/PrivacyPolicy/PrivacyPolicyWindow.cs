@@ -16,14 +16,11 @@ namespace NV22SpectralInteg.PrivacyPolicy
     {
         private Button acceptButton;
         private Button declineButton;
+        private readonly Form ownerDashboard;
 
-        public PrivacyPolicyWindow()
+        public PrivacyPolicyWindow(Form dashboard)
         {
-            Logger.Log("🛑 In PrivacyPolicyWindow Stopping any existing KioskIdleManager instance before starting a new one.");
-            KioskIdleManager.Stop();
-
-            Logger.Log("✨ In PrivacyPolicyWindow Starting KioskIdleManager with 10-second timeout for OTP screen.");
-            KioskIdleManager.Start(10);
+            this.ownerDashboard = dashboard;
             InitializeComponent();
             InitializeUI();
         }

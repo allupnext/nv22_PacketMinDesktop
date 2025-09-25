@@ -592,8 +592,7 @@ namespace NV22SpectralInteg.Login
                 // Optional: If sending the OTP fails, you might want to restart the timer
                 // with the original short timeout.
 
-                Logger.Log("✨ In Login OTP failed so Starting KioskIdleManager with 10-second timeout for OTP screen.");
-                KioskIdleManager.Start(10);
+                ResetToLogin();
             }
         }
 
@@ -626,63 +625,53 @@ namespace NV22SpectralInteg.Login
                 countdownTimer.Stop();
                 Logger.Log($"Login successful ✅ User: {AppSession.CustomerName}, Balance: {AppSession.CustomerBALANCE}💰");
                 Logger.LogNewUserStart($"{AppSession.CustomerName}");
+
+                // Stop the timer for the OTP screen before proceeding.
+                KioskIdleManager.Stop();
+
                 var dashboard = new NV22SpectralInteg.Dashboard.Dashboard(this.validator);
+
+                if (config != null)
+                {
+                    Global.ComPort = config.ComPort;
+                    Logger.Log($"ComPort set from config file: {Global.ComPort}");
+                }
 
                 dashboard.Show();
                 this.Hide();
-                dashboard.Shown += (s, args) =>
+
+                KioskIdleManager.Initialize(Program.PerformLogout);
+
+                // START the 10 - second timer for the Privacy Policy.
+                Logger.Log("✨ Starting 10-second timer for Privacy Policy.");
+                KioskIdleManager.Start(10);
+
+                var terms = new NV22SpectralInteg.PrivacyPolicy.PrivacyPolicyWindow(dashboard);
+                var result = terms.ShowDialog(dashboard); // This makes the policy appear over the dashboard.
+
+                KioskIdleManager.Stop();
+                Logger.Log("🛑 Privacy Policy closed. Timer stopped.");
+
+                if (result == DialogResult.OK)
                 {
-                    try
+                    Logger.Log("Privacy Policy accepted ✅. Starting dashboard main loop.");
+                    KioskIdleManager.Initialize(dashboard.PerformAutomaticLogout);
+                    // START the 20 - second timer for the Dashboard.
+                    Logger.Log("✨ Starting 20-second timer for Dashboard.");
+                    KioskIdleManager.Start(20);
+                    
+                    dashboard.MainLoop();
+                }
+                else
+                {
+                    Logger.Log("Privacy Policy not accepted ❌ Returning to login");
+                    if (!dashboard.IsDisposed)
                     {
-                        Logger.Log("Showing Privacy Policy popup 📜");
-                        var terms = new NV22SpectralInteg.PrivacyPolicy.PrivacyPolicyWindow();
-                        var result = terms.ShowDialog(dashboard);
-
-                        if (result != DialogResult.OK)
-                        {
-                            Logger.Log("Privacy Policy not accepted ❌ Returning to login");
-                            this.ResetToLogin();
-                            this.Show();
-                            dashboard.Close();
-                        }
-                        else
-                        { 
-                            Logger.Log("✨ In Dashboard Stopping KioskIdleManager before entering main dashboard.");
-                            KioskIdleManager.Stop();
-                            try
-                            {
-
-                                // Access the ComPort key from the deserialized object and assign it
-                                if (config != null)
-                                {
-                                    Global.ComPort = config.ComPort;
-                                    Logger.Log($"ComPort set from config file: {Global.ComPort}");
-                                }
-                                else
-                                {
-                                    // Handle the case where deserialization fails
-                                    Logger.LogError("Failed to deserialize config.json.", new InvalidOperationException("JSON file is empty or malformed."));
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                // Log or handle any file reading or deserialization errors
-                                Logger.LogError("Error reading config.json.", ex);
-                            }
-
-                            Logger.Log("Privacy Policy accepted ✅");
-                            dashboard.MainLoop();
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.LogError("Error displaying Privacy Policy window ❌", ex);
-                        MessageBox.Show($"Unexpected error:\n{ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         dashboard.Close();
-                        this.ResetToLogin();
-                        this.Show();
                     }
-                };
+                    this.ResetToLogin();
+                    this.Show();
+                }
             }
             else
             {
