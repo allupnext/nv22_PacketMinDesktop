@@ -254,6 +254,9 @@ namespace NV22SpectralInteg.Dashboard
 
         private async void ConfirmButton_Click(object sender, EventArgs e)
         {
+            KioskIdleManager.Stop();
+            Logger.Log("🛑 KioskIdleManager stopped for transaction.");
+
             Logger.Log($"Confirm button clicked. Amount: {this.currentGrandTotal}");
 
             // Step 1: Just stop the software polling loop. Do NOT shut down the hardware yet.
@@ -300,17 +303,17 @@ namespace NV22SpectralInteg.Dashboard
 
                     //var requestBody = new
                     //{
-                    //    kioskId = 1,
-                    //    kioskRegId = 30,
+                    //    kioskId = 3,
+                    //    kioskRegId = 63,
                     //    customerRegId = 27,
-                    //    kioskTotalAmount = 1000,
+                    //    kioskTotalAmount = 1,
                     //    amountDetails = new[]
                     //    {
                     //        new
                     //        {
-                    //            denomination = 1000,
+                    //            denomination = 1,
                     //            count = 1,
-                    //            total = 1000
+                    //            total = 1
                     //        }
                     //    }
                     //};
@@ -342,6 +345,9 @@ namespace NV22SpectralInteg.Dashboard
 
                     if (!(bool)result.isSucceed)
                     {
+                        var successPopup = new SuccessPopup(AppSession.CustomerName, currentGrandTotal, (bool)result.isSucceed, result.message.ToString());
+                        successPopup.ShowDialog(this);
+
                         Logger.Log($"❌ Transaction failed → {result.message}");
                         //MessageBox.Show($"{result.message}", "Transaction Failed", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                         //ResetForNewTransaction(); 
@@ -361,26 +367,19 @@ namespace NV22SpectralInteg.Dashboard
                         Logger.Log("🚀 Print Receipt call...");
                         printer.printReceipt();
 
-                        var successPopup = new SuccessPopup(AppSession.CustomerName, currentGrandTotal, (bool)result.isSucceed, result.message.ToString());
-                        successPopup.ShowDialog(this);
-
-                        Logger.Log("🛑 SuccessPopup (Failed) closed. Timer stopped.");
-                        KioskIdleManager.Stop();
-
+                        
                         // Now, handle the user's choice from the popup.
                         if (successPopup.DialogResult == DialogResult.Cancel)
                         {
-                            // User clicked "Log Out" or closed the popup.
-                            stoprunning(); // Now it's correct to call this to log out and shut down hardware.
-                            var login = new Login.LoginForm();
-                            login.Show();
-                            AppSession.Clear();
-                            this.Hide();
+                            FinalizeAndReturnToLogin();
                         }
-                        
+
                     }
                     else
                     {
+                        var successPopup = new SuccessPopup(AppSession.CustomerName, currentGrandTotal, (bool)result.isSucceed, result.message.ToString());
+                        successPopup.ShowDialog(this);
+
                         AppSession.StoreBalance = result.data.storeBalance;
                         Logger.Log("💰 StoreBalance is " + AppSession.StoreBalance);
 
@@ -403,11 +402,6 @@ namespace NV22SpectralInteg.Dashboard
                         Logger.Log("🚀 Print Receipt call...");
                         printer.printReceipt();
 
-                        var successPopup = new SuccessPopup(AppSession.CustomerName, currentGrandTotal, (bool)result.isSucceed, result.message.ToString());
-                        successPopup.ShowDialog(this);
-
-                        Logger.Log("🛑 SuccessPopup (Succeeded) closed. Timer stopped.");
-                        KioskIdleManager.Stop();
 
                         try
                         {
@@ -436,12 +430,7 @@ namespace NV22SpectralInteg.Dashboard
                         }
                         else
                         {
-                            // User clicked "Log Out" or closed the popup.
-                            var login = new Login.LoginForm();
-                            login.Show();
-                            stoprunning(); // Now it's correct to call this to log out and shut down hardware.
-                            AppSession.Clear();
-                            this.Hide();
+                            FinalizeAndReturnToLogin();
                         }
 
 
@@ -455,125 +444,22 @@ namespace NV22SpectralInteg.Dashboard
             }
         }
 
-        private void FinalizeAndReturnToLogin()
+        internal void FinalizeAndReturnToLogin()
         {
+            KioskIdleManager.Stop();
             stoprunning();
             AppSession.Clear();
-            KioskIdleManager.Stop();
 
-            KioskIdleManager.Initialize(Program.PerformLogout); // Re-initialize with the correct method
-            var login = new NV22SpectralInteg.Login.LoginForm();
-            login.Show();
+            Program.mainLoginForm.ResetToLogin();
+            Program.mainLoginForm.Show();
 
             this.Hide();
             this.Close();
         }
 
-        internal async void PerformAutomaticLogout()
+        internal async void PerformTransaction()
         {
-            this.Running = false;
-            Logger.Log("⏳ Inactivity timeout reached. Processing final transaction...");
-
-            bool success = await ProcessTransactionAsync();
-
-            if (!success)
-            {
-                Logger.Log("CRITICAL: Automatic transaction failed! Notes might be stuck in escrow.");
-            }
-
-            // Now call the shared method on the UI thread
-            this.Invoke((MethodInvoker)delegate {
-                FinalizeAndReturnToLogin();
-            });
-        }
-        private async Task<bool> ProcessTransactionAsync()
-        {
-            // Safety check: If there's no money, there's nothing to do. Return success.
-            if (!_validator.NoteEscrowCounts.Any())
-            {
-                Logger.Log("ProcessTransactionAsync: No notes in escrow to process.");
-                return true;
-            }
-
-            try
-            {
-                using (var client = new HttpClient())
-                {
-                    string apiUrl = "https://uat.pocketmint.ai/api/kiosks/user/transaction/persist";
-
-                    var amountDetails = _validator.NoteEscrowCounts
-                        .Select(kvp =>
-                        {
-                            string key = kvp.Key;
-                            int count = kvp.Value;
-                            var denominationMatch = System.Text.RegularExpressions.Regex.Match(key, @"\d+");
-                            int denomination = denominationMatch.Success && int.TryParse(denominationMatch.Value, out var d) ? d : 0;
-                            return new { denomination, count, total = denomination * count };
-                        })
-                        .ToList();
-
-                    decimal kioskTotalAmount = amountDetails.Sum(a => a.total);
-
-                    var requestBody = new
-                    {
-                        kioskId = AppSession.KioskId,
-                        kioskRegId = AppSession.KioskRegId,
-                        customerRegId = AppSession.CustomerRegId,
-                        kioskTotalAmount = kioskTotalAmount,
-                        amountDetails = amountDetails
-                    };
-
-                 
-                    Logger.Log("📤 Sending transaction request to API...");
-                    string jsonPayload = JsonConvert.SerializeObject(requestBody);
-                    Logger.Log($"📦 Payload: {jsonPayload}");
-
-                    var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
-
-                    client.DefaultRequestHeaders.Accept.Clear();
-                    client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-                    client.DefaultRequestHeaders.UserAgent.ParseAdd("PostmanRuntime/7.35.0");
-                    client.DefaultRequestHeaders.Remove("Authorization");
-                    client.DefaultRequestHeaders.Add("Authorization", $"{ApiService.AuthToken}");
-                    client.DefaultRequestHeaders.Add("Cookie", "JSESSIONID=C4537CD8D22C7AF20A50A08992FD3EFF; Path=/; Secure; HttpOnly");
-
-                    HttpResponseMessage response = await client.PostAsync(apiUrl, content);
-                    string responseText = await response.Content.ReadAsStringAsync();
-                    Logger.Log($"📬 API Response: {responseText}");
-
-                    var result = JsonConvert.DeserializeObject<dynamic>(responseText);
-                    if (result != null && (bool)result.isSucceed)
-                    {
-                        var receiptData = new LocalRequestBean
-                        {
-                            operation = "bankadd",
-                            kioskTotalAmount = kioskTotalAmount,
-                            feeAmount = result.data.cryptoConversionFee,
-                            isSucceed = result.isSucceed,
-                            printmessage = result.message
-                        };
-
-                        Logger.Log("🚀 ReceiptPrinter constructor call...");
-                        // Call the print function
-                        var printer = new ReceiptPrinter(receiptData);
-                        Logger.Log("🚀 Print Receipt call...");
-                        printer.printReceipt();
-
-                        Logger.Log("✅ Transaction API call SUCCEEDED.");
-                        return true;
-                    }
-                    else
-                    {
-                        Logger.Log("❌ Transaction API call FAILED.");
-                        return false;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError("🚨 Exception in ProcessTransactionAsync", ex);
-                return false;
-            }
+            ConfirmButton_Click(this, EventArgs.Empty);
         }
 
         private void ResetForNewTransaction()
@@ -1117,10 +1003,8 @@ namespace NV22SpectralInteg.Dashboard
         private void LogoutButton_Click(object sender, EventArgs e)
         {
             Logger.Log("Manual logout initiated by user.");
-            PerformAutomaticLogout();
+            FinalizeAndReturnToLogin();
         }
-
-
 
 
         private void btnHalt_Click(object sender, EventArgs e)
@@ -1282,12 +1166,12 @@ namespace NV22SpectralInteg.Dashboard
         public Dictionary<string, int> testCounts = new Dictionary<string, int>
         {
             { "$1", 2 },
-            { "$2", 2 },
-            { "$5", 2 },
-            { "$10", 2 },
-            { "$20", 2 },
-            { "$50", 2 },
-            { "$100", 2 }
+            //{ "$2", 2 },
+            //{ "$5", 2 },
+            //{ "$10", 2 },
+            //{ "$20", 2 },
+            //{ "$50", 2 },
+            //{ "$100", 2 }
         };
 
         //public Dictionary<string, int> testCounts = new Dictionary<string, int>

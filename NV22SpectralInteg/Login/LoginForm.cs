@@ -655,10 +655,10 @@ namespace NV22SpectralInteg.Login
                 if (result == DialogResult.OK)
                 {
                     Logger.Log("Privacy Policy accepted ✅. Starting dashboard main loop.");
-                    KioskIdleManager.Initialize(dashboard.PerformAutomaticLogout);
+                    KioskIdleManager.Initialize(dashboard.PerformTransaction);
                     // START the 20 - second timer for the Dashboard.
-                    Logger.Log("✨ Starting 20-second timer for Dashboard.");
-                    KioskIdleManager.Start(20);
+                    Logger.Log("✨ Starting 10-second timer for Dashboard.");
+                    KioskIdleManager.Start(10);
                     
                     dashboard.MainLoop();
                 }

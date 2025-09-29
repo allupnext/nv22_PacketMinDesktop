@@ -8,9 +8,9 @@ namespace NV22SpectralInteg
 {
     public static class AppSession
     {
-        public static string KioskId { get; set; } = null;
-        public static string KioskRegId { get; set; } = null;
-        public static string CustomerRegId { get; set; } = null;
+        public static string KioskId { get; set; } = "3";
+        public static string KioskRegId { get; set; } = "63";
+        public static string CustomerRegId { get; set; } = "27";
         public static string CustomerName { get; set; } = "None";
         public static string StoreName { get; set; } = null;
         public static string StoreAddress { get; set; } = null;

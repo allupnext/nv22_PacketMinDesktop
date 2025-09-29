@@ -18,17 +18,29 @@ namespace NV22SpectralInteg.Dashboard
         // Constructor that accepts the name and amount to display
         public SuccessPopup(string recipientName, decimal amount, bool isSucceed, string message)
         {
-            Logger.Log("🛑 In SuccessPopup Stopping any existing KioskIdleManager instance before starting a new one.");
-            KioskIdleManager.Stop();
-
-            Logger.Log("✨ In SuccessPopup Starting KioskIdleManager with 10-second timeout for OTP screen.");
-            KioskIdleManager.Start(10);
-
             InitializeCustomComponents(recipientName, amount, isSucceed, message);
+            KioskIdleManager.Initialize(Logout);
+            Logger.Log("✨ SuccessPopup created. Starting 7-second inactivity timer.");
+            KioskIdleManager.Start(7);
+        }
+
+        private void Logout()
+        {
+            KioskIdleManager.Stop();
+            AppSession.Clear();
+
+            Program.mainLoginForm.ResetToLogin();
+            Program.mainLoginForm.Show();
+
+            this.Hide();
+            this.Close();
         }
 
         private void InitializeCustomComponents(string recipientName, decimal amount, bool isSucceed, string message)
         {
+            // Make sure popup does not show in Alt+Tab
+            this.ShowInTaskbar = false;
+
             // ===== Form Styling =====
             this.FormBorderStyle = FormBorderStyle.None; // Removes the title bar and border
             this.StartPosition = FormStartPosition.CenterParent; // Centers the popup over the parent form
