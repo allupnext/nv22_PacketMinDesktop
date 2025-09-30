@@ -4,19 +4,12 @@ using NV22SpectralInteg.Classes;
 using NV22SpectralInteg.InactivityManager;
 using NV22SpectralInteg.Login;
 using NV22SpectralInteg.Services;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel;
 using System.Data;
-using System.Drawing;
-using System.Linq;
 using System.Management;
 using System.Net.Http.Headers;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 
 
 namespace NV22SpectralInteg.Dashboard
@@ -43,19 +36,24 @@ namespace NV22SpectralInteg.Dashboard
         private TableLayoutPanel notesTable;
         private Button confirmButton;
         private int currentGrandTotal = 0;
+        private static bool IsApiEnabled;
 
         private readonly CValidator _validator;
+        private readonly AppConfig config;
 
-        public Dashboard(CValidator validator)
+        public Dashboard(CValidator validator, AppConfig config)
         {
             Logger.Log("🖥️ Dashboard initialized");
             InitializeComponent();
             _validator = validator;
+            this.config = config;
+
+            IsApiEnabled = !config.IsDevelopment;
+
             InitializeDashboardUI();
             timer1.Interval = pollTimer;
             reconnectionTimer.Tick += new EventHandler(reconnectionTimer_Tick);
-
-            //UpdateNotesDisplay();
+            
         }
 
         private void reconnectionTimer_Tick(object sender, EventArgs e)
@@ -63,7 +61,7 @@ namespace NV22SpectralInteg.Dashboard
             if (sender is System.Windows.Forms.Timer t)
                 t.Enabled = false;
         }
-       
+
         public void UpdateBalanceDisplay()
         {
             if (balanceLabel != null)
@@ -117,7 +115,7 @@ namespace NV22SpectralInteg.Dashboard
                 Padding = new Padding(0),
             };
 
-            string customerName = AppSession.CustomerName; 
+            string customerName = AppSession.CustomerName;
             Font customerFont = new Font("Poppins", 40, FontStyle.Bold);
 
             Size nameSize = TextRenderer.MeasureText(customerName, customerFont);
@@ -128,12 +126,12 @@ namespace NV22SpectralInteg.Dashboard
                 Font = customerFont,
                 AutoSize = false,
                 TextAlign = ContentAlignment.MiddleCenter,
-                Size = nameSize 
+                Size = nameSize
             };
 
-            
 
-           
+
+
             // 4. Create the label using the correct text and size
             balanceLabel = new Label
             {
@@ -150,7 +148,7 @@ namespace NV22SpectralInteg.Dashboard
                 ForeColor = Color.DarkGray,
                 Font = new Font("Poppins", 24, FontStyle.Regular),
                 AutoSize = false,
-                Size = new Size(360, 80), 
+                Size = new Size(360, 80),
                 TextAlign = ContentAlignment.MiddleCenter,
             };
 
@@ -197,7 +195,7 @@ namespace NV22SpectralInteg.Dashboard
             {
                 Dock = DockStyle.Fill,
                 BackColor = this.BackColor,
-                Padding = new Padding(0,20,0,0)
+                Padding = new Padding(0, 20, 0, 0)
             };
             this.Controls.Add(contentPanel);
             contentPanel.BringToFront();
@@ -250,197 +248,173 @@ namespace NV22SpectralInteg.Dashboard
             contentPanel.Controls.Add(tableWrapper);
         }
 
+
         // In Dashboard.cs, add this new method anywhere inside the class
+        private async Task<(dynamic result, decimal totalAmount)> PerformTransactionInBackgroundAsync()
+        {
+            using (var client = new HttpClient())
+            {
+                string apiUrl = "https://uat.pocketmint.ai/api/kiosks/user/transaction/persist";
+
+                var amountDetails = _validator.NoteEscrowCounts
+                    .Select(kvp =>
+                    {
+                        string key = kvp.Key;
+                        int count = kvp.Value;
+                        var denominationMatch = System.Text.RegularExpressions.Regex.Match(key, @"\d+");
+                        int denomination = denominationMatch.Success && int.TryParse(denominationMatch.Value, out var d) ? d : 0;
+                        return new { denomination, count, total = denomination * count };
+                    })
+                    .ToList();
+
+                decimal kioskTotalAmount = amountDetails.Sum(a => a.total);
+
+                var requestBody = new
+                {
+                    kioskId = AppSession.KioskId,
+                    kioskRegId = AppSession.KioskRegId,
+                    customerRegId = AppSession.CustomerRegId,
+                    kioskTotalAmount = kioskTotalAmount,
+                    amountDetails = amountDetails
+                };
+
+                //var requestBody = new
+                //{
+                //    kioskId = 3,
+                //    kioskRegId = 63,
+                //    customerRegId = 27,
+                //    kioskTotalAmount = 1,
+                //    amountDetails = new[]
+                //    {
+                //        new
+                //        {
+                //            denomination = 1,
+                //            count = 1,
+                //            total = 1
+                //        }
+                //    }
+                //};
+
+                Logger.Log("📤 Sending transaction request to API...");
+                string jsonPayload = JsonConvert.SerializeObject(requestBody);
+                Logger.Log($"📦 Payload: {jsonPayload}");
+
+                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+
+                client.DefaultRequestHeaders.Accept.Clear();
+                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                client.DefaultRequestHeaders.UserAgent.ParseAdd("PostmanRuntime/7.35.0");
+                client.DefaultRequestHeaders.Remove("Authorization");
+                client.DefaultRequestHeaders.Add("Authorization", $"{ApiService.AuthToken}");
+                client.DefaultRequestHeaders.Add("Cookie", "JSESSIONID=C4537CD8D22C7AF20A50A08992FD3EFF; Path=/; Secure; HttpOnly");
+
+                // 1. Perform the network call
+                HttpResponseMessage response = await client.PostAsync(apiUrl, content);
+                string responseText = await response.Content.ReadAsStringAsync();
+                    Logger.Log($"📬 API Response: {responseText}");
+                var result = JsonConvert.DeserializeObject<dynamic>(responseText);
+
+                // 2. Perform the printing (still in the background)
+                if (result != null)
+                {
+                    var receiptData = new LocalRequestBean
+                    {
+                        operation = "bankadd",
+                        kioskTotalAmount = kioskTotalAmount,
+                        isSucceed = (bool)result.isSucceed,
+                        printmessage = (string)result.message,
+                        feeAmount = ((bool)result.isSucceed && result.data?.cryptoConversionFee != null) ? (decimal)result.data.cryptoConversionFee : 0.00m
+                    };
+                    var printer = new ReceiptPrinter(receiptData);
+                    printer.printReceipt(); // This no longer blocks the UI!
+                }
+
+                return (result, kioskTotalAmount);
+            }
+        }
 
         private async void ConfirmButton_Click(object sender, EventArgs e)
         {
             KioskIdleManager.Stop();
-            Logger.Log("🛑 KioskIdleManager stopped for transaction.");
+            stoprunning();
 
-            Logger.Log($"Confirm button clicked. Amount: {this.currentGrandTotal}");
+            Logger.Log("🟢 Preparing transaction...");
 
-            // Step 1: Just stop the software polling loop. Do NOT shut down the hardware yet.
-            this.Running = false;
+            //Safety check: Ensure there is actually data to send.
+            if (!_validator.NoteEscrowCounts.Any() && IsApiEnabled == true)
+            {
+                Logger.Log("⚠️ Confirm button clicked, but no amount was detected. Resetting.");
+                MessageBox.Show("No amount detected. Please insert notes to continue.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                ResetForNewTransaction(); // Reset the screen and restart polling.
+                return;
+            }
 
+            var processingPopup = new ProcessingPopup();
             try
             {
-                Logger.Log("🟢 Preparing transaction...");
+                // 1. Show the popup. The UI thread is now free.
+                processingPopup.Show(this);
 
-                //Safety check: Ensure there is actually data to send.
-                if (!_validator.NoteEscrowCounts.Any())
+                // 2. Run ALL slow operations in the background and wait for the result.
+                // The UI thread remains responsive and the GIF animates smoothly.
+                var (result, kioskTotalAmount) = await Task.Run(() => PerformTransactionInBackgroundAsync());
+
+                // 3. Once the background task is complete, close the processing popup.
+                processingPopup.Close();
+
+                // 4. Check the result and show the final popup.
+                if (result == null)
                 {
-                    Logger.Log("⚠️ Confirm button clicked, but no amount was detected. Resetting.");
-                    MessageBox.Show("No amount detected. Please insert notes to continue.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    ResetForNewTransaction(); // Reset the screen and restart polling.
+                    Logger.Log("⚠️ API returned null response.");
+                    ResetForNewTransaction();
                     return;
                 }
 
-                using (var client = new HttpClient())
-                {
-                    string apiUrl = "https://uat.pocketmint.ai/api/kiosks/user/transaction/persist";
-
-                    var amountDetails = _validator.NoteEscrowCounts
-                        .Select(kvp =>
-                        {
-                            string key = kvp.Key;
-                            int count = kvp.Value;
-                            var denominationMatch = System.Text.RegularExpressions.Regex.Match(key, @"\d+");
-                            int denomination = denominationMatch.Success && int.TryParse(denominationMatch.Value, out var d) ? d : 0;
-                            return new { denomination, count, total = denomination * count };
-                        })
-                        .ToList();
-
-                    decimal kioskTotalAmount = amountDetails.Sum(a => a.total);
-
-                    var requestBody = new
-                    {
-                        kioskId = AppSession.KioskId,
-                        kioskRegId = AppSession.KioskRegId,
-                        customerRegId = AppSession.CustomerRegId,
-                        kioskTotalAmount = kioskTotalAmount,
-                        amountDetails = amountDetails
-                    };
-
-                    //var requestBody = new
-                    //{
-                    //    kioskId = 3,
-                    //    kioskRegId = 63,
-                    //    customerRegId = 27,
-                    //    kioskTotalAmount = 1,
-                    //    amountDetails = new[]
-                    //    {
-                    //        new
-                    //        {
-                    //            denomination = 1,
-                    //            count = 1,
-                    //            total = 1
-                    //        }
-                    //    }
-                    //};
-
-                    Logger.Log("📤 Sending transaction request to API...");
-                    string jsonPayload = JsonConvert.SerializeObject(requestBody);
-                    Logger.Log($"📦 Payload: {jsonPayload}");
-
-                    var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
-
-                    client.DefaultRequestHeaders.Accept.Clear();
-                    client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-                    client.DefaultRequestHeaders.UserAgent.ParseAdd("PostmanRuntime/7.35.0");
-                    client.DefaultRequestHeaders.Remove("Authorization");
-                    client.DefaultRequestHeaders.Add("Authorization", $"{ApiService.AuthToken}");
-                    client.DefaultRequestHeaders.Add("Cookie", "JSESSIONID=C4537CD8D22C7AF20A50A08992FD3EFF; Path=/; Secure; HttpOnly");
-
-                    HttpResponseMessage response = await client.PostAsync(apiUrl, content);
-                    string responseText = await response.Content.ReadAsStringAsync();
-                    Logger.Log($"📬 API Response: {responseText}");
-
-                    var result = JsonConvert.DeserializeObject<dynamic>(responseText);
-                    if (result == null)
-                    {
-                        Logger.Log("⚠️ API returned null response.");
-                        ResetForNewTransaction(); // Reset on failure
-                        return;
-                    }
-
-                    if (!(bool)result.isSucceed)
-                    {
-                        var successPopup = new SuccessPopup(AppSession.CustomerName, currentGrandTotal, (bool)result.isSucceed, result.message.ToString());
-                        successPopup.ShowDialog(this);
-
-                        Logger.Log($"❌ Transaction failed → {result.message}");
-                        //MessageBox.Show($"{result.message}", "Transaction Failed", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        //ResetForNewTransaction(); 
-
-                        var receiptData = new LocalRequestBean
-                        {
-                            operation = "bankadd",
-                            kioskTotalAmount = kioskTotalAmount,
-                            feeAmount = result.data.cryptoConversionFee ?? 0.00m,
-                            isSucceed = result.isSucceed,
-                            printmessage = result.message
-                        };
-
-                        Logger.Log("🚀 ReceiptPrinter constructor call...");
-                        // Call the print function
-                        var printer = new ReceiptPrinter(receiptData);
-                        Logger.Log("🚀 Print Receipt call...");
-                        printer.printReceipt();
-
-                        
-                        // Now, handle the user's choice from the popup.
-                        if (successPopup.DialogResult == DialogResult.Cancel)
-                        {
-                            FinalizeAndReturnToLogin();
-                        }
-
-                    }
-                    else
-                    {
-                        var successPopup = new SuccessPopup(AppSession.CustomerName, currentGrandTotal, (bool)result.isSucceed, result.message.ToString());
-                        successPopup.ShowDialog(this);
-
-                        AppSession.StoreBalance = result.data.storeBalance;
-                        Logger.Log("💰 StoreBalance is " + AppSession.StoreBalance);
-
-                        // This block runs ONLY if the API call was successful.
-                        Logger.Log("✅ Transaction succeeded!");
-                        Logger.Log($"💳 New {AppSession.CustomerBALANCE}'s balance: {result.data.userBalance}");
-
-                        var receiptData = new LocalRequestBean
-                        {
-                            operation = "bankadd",
-                            kioskTotalAmount = kioskTotalAmount,
-                            feeAmount = result.data.cryptoConversionFee,
-                            isSucceed = result.isSucceed,
-                            printmessage = result.message
-                        };
-
-                        Logger.Log("🚀 ReceiptPrinter constructor call...");
-                        // Call the print function
-                        var printer = new ReceiptPrinter(receiptData);
-                        Logger.Log("🚀 Print Receipt call...");
-                        printer.printReceipt();
-
-
-                        try
-                        {
-                            string rawBalance = result.data.userBalance?.ToString() ?? "$0.00";
-                            if (decimal.TryParse(rawBalance, out decimal newBalance))
-                            {
-                                AppSession.CustomerBALANCE = newBalance;
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            Logger.LogError("🚨 Error parsing balance", ex);
-                        }
-
-                        
-
-                        // Now, handle the user's choice from the popup.
-                        if (successPopup.DialogResult == DialogResult.OK)
-                        {
-                            Logger.Log("✨ Starting 10-second timer for new Dashboard transaction.");
-                            KioskIdleManager.Start(10);
-
-                            UpdateBalanceDisplay();
-                            ResetForNewTransaction();
-                            MainLoop();
-                        }
-                        else
-                        {
-                            FinalizeAndReturnToLogin();
-                        }
-
-
-                    }
-                }
+                ShowResultAndPrintReceipt(result);
             }
             catch (Exception ex)
             {
+                if (processingPopup != null && !processingPopup.IsDisposed)
+                {
+                    processingPopup.Close();
+                }
                 Logger.LogError("🚨 Exception in ConfirmButton_Click", ex);
                 MessageBox.Show("A critical error occurred: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+        private void ShowResultAndPrintReceipt(dynamic result)
+        {
+
+            var successPopup = new SuccessPopup(AppSession.CustomerName, currentGrandTotal, (bool)result.isSucceed, (string)result.message);
+            successPopup.ShowDialog(this);
+
+            // Handle the user's choice from the popup
+            if ((bool)result.isSucceed)
+            {
+                // Update balance and session info on success
+                AppSession.StoreBalance = result.data.storeBalance;
+                if (decimal.TryParse(result.data.userBalance?.ToString() ?? "0", out decimal newBalance))
+                {
+                    AppSession.CustomerBALANCE = newBalance;
+                }
+
+                if (successPopup.DialogResult == DialogResult.OK)
+                {
+                    UpdateBalanceDisplay();
+                    ResetForNewTransaction();
+                    MainLoop();
+                }
+                else
+                {
+                    FinalizeAndReturnToLogin();
+                }
+            }
+            else // Transaction failed
+            {
+                if (successPopup.DialogResult == DialogResult.Cancel)
+                {
+                    FinalizeAndReturnToLogin();
+                }
             }
         }
 
@@ -480,7 +454,7 @@ namespace NV22SpectralInteg.Dashboard
             Logger.Log("CreateNotesTable called.");
 
             grandTotal = 0;
-            var counts = _validator?.NoteEscrowCounts ?? new Dictionary<string, int>();
+            var counts = IsApiEnabled ? _validator?.NoteEscrowCounts ?? new Dictionary<string, int>() : testCounts;
             //var counts = testCounts;
             Logger.Log($"Counts loaded. Total denominations: {counts.Count}");
 
@@ -612,7 +586,7 @@ namespace NV22SpectralInteg.Dashboard
                 Padding = new Padding(10, 0, 10, 0), // ✅ ADD PADDING for left/right alignment
                 TextAlign = alignment // ✅ USE THE NEW ALIGNMENT PARAMETER
             };
-            
+
             label.Paint += (sender, e) =>
             {
                 ControlPaint.DrawBorder(e.Graphics, label.ClientRectangle,
@@ -650,7 +624,7 @@ namespace NV22SpectralInteg.Dashboard
 
         private void ToggleDataView()
         {
-            var hasData = _validator?.NoteEscrowCounts.Any() ?? false;
+            var hasData = IsApiEnabled ? _validator?.NoteEscrowCounts.Any() ?? false : testCounts.Any();
             //var hasData = testCounts.Any();
 
             // This part is the same, it ensures the correct controls are set to visible/invisible.
@@ -695,8 +669,8 @@ namespace NV22SpectralInteg.Dashboard
                 contentPanel.Controls.Add(centerPanel); // Add the new panel with the table
 
                 // Centering logic
-               
-                int topMargin = 10; 
+
+                int topMargin = 10;
                 centerPanel.Location = new Point(
                     (contentPanel.Width - centerPanel.Width) / 2,
                     topMargin
@@ -820,6 +794,11 @@ namespace NV22SpectralInteg.Dashboard
                 //    comboBoxComPorts.SelectedIndex = 0;
                 //    comboBoxComPorts.Enabled = false;
                 //}
+
+                if (!IsApiEnabled)
+                {
+                    UpdateNotesDisplay();
+                }
             }
             catch (Exception ex)
             {

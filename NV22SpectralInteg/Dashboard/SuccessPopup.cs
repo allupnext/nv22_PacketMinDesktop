@@ -18,12 +18,18 @@ namespace NV22SpectralInteg.Dashboard
         // Constructor that accepts the name and amount to display
         public SuccessPopup(string recipientName, decimal amount, bool isSucceed, string message)
         {
+            this.Opacity = 0;
+            this.Shown += SuccessPopup_Shown;
             InitializeCustomComponents(recipientName, amount, isSucceed, message);
             KioskIdleManager.Initialize(Logout);
             Logger.Log("✨ SuccessPopup created. Starting 7-second inactivity timer.");
             KioskIdleManager.Start(7);
         }
-
+        private void SuccessPopup_Shown(object sender, EventArgs e)
+        {
+            // Now that the form is fully rendered, make it visible in one go.
+            this.Opacity = 1;
+        }
         private void Logout()
         {
             KioskIdleManager.Stop();

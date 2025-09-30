@@ -59,7 +59,7 @@ namespace NV22SpectralInteg.InactivityManager
 
             // Position the form in the bottom-right corner with a 10px margin.
             this.Left = workingArea.Right - this.Width - 20;
-            this.Top = workingArea.Bottom - this.Height + 15;
+            this.Top = workingArea.Bottom - this.Height - 15;
         }
 
 

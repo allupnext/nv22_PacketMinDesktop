@@ -54,6 +54,8 @@ namespace NV22SpectralInteg.Login
         private CValidator validator;
         public LoginForm()
         {
+            this.Opacity = 0;
+            this.Shown += LoginForm_Shown;
             try
             {
                 // Get the full path to the JSON file
@@ -85,7 +87,6 @@ namespace NV22SpectralInteg.Login
             //this.FormBorderStyle = FormBorderStyle.Sizable; // Removes the title bar and border
 
             this.validator = new CValidator();
-            this.Shown += LoginForm_Shown;
 
             currentNumpad = new Numpad(null, "");
             currentNumpad.Owner = this; // Set the owner for proper management
@@ -629,7 +630,7 @@ namespace NV22SpectralInteg.Login
                 // Stop the timer for the OTP screen before proceeding.
                 KioskIdleManager.Stop();
 
-                var dashboard = new NV22SpectralInteg.Dashboard.Dashboard(this.validator);
+                var dashboard = new NV22SpectralInteg.Dashboard.Dashboard(this.validator, this.config);
 
                 if (config != null)
                 {
@@ -699,6 +700,7 @@ namespace NV22SpectralInteg.Login
             verifyButton.Visible = false;
             timerLabel.Visible = false;
             resendButton.Visible = false;
+            currentNumpad.Hide();   
 
             // Show the initial login button
             loginButton.Visible = true;
@@ -889,6 +891,7 @@ namespace NV22SpectralInteg.Login
 
         private void LoginForm_Shown(object sender, EventArgs e)
         {
+            this.Opacity = 1;
             if (string.IsNullOrEmpty(AppSession.KioskId))
             {
                 kioskPanel.Visible = true;
