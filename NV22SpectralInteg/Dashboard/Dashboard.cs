@@ -250,88 +250,88 @@ namespace NV22SpectralInteg.Dashboard
 
 
         // In Dashboard.cs, add this new method anywhere inside the class
-        private async Task<(dynamic result, decimal totalAmount)> PerformTransactionInBackgroundAsync()
-        {
-            using (var client = new HttpClient())
-            {
-                string apiUrl = "https://uat.pocketmint.ai/api/kiosks/user/transaction/persist";
+        //private async Task<(dynamic result, decimal totalAmount)> PerformTransactionInBackgroundAsync()
+        //{
+        //    using (var client = new HttpClient())
+        //    {
+        //        string apiUrl = "https://uat.pocketmint.ai/api/kiosks/user/transaction/persist";
 
-                var amountDetails = _validator.NoteEscrowCounts
-                    .Select(kvp =>
-                    {
-                        string key = kvp.Key;
-                        int count = kvp.Value;
-                        var denominationMatch = System.Text.RegularExpressions.Regex.Match(key, @"\d+");
-                        int denomination = denominationMatch.Success && int.TryParse(denominationMatch.Value, out var d) ? d : 0;
-                        return new { denomination, count, total = denomination * count };
-                    })
-                    .ToList();
+        //        var amountDetails = _validator.NoteEscrowCounts
+        //            .Select(kvp =>
+        //            {
+        //                string key = kvp.Key;
+        //                int count = kvp.Value;
+        //                var denominationMatch = System.Text.RegularExpressions.Regex.Match(key, @"\d+");
+        //                int denomination = denominationMatch.Success && int.TryParse(denominationMatch.Value, out var d) ? d : 0;
+        //                return new { denomination, count, total = denomination * count };
+        //            })
+        //            .ToList();
 
-                decimal kioskTotalAmount = amountDetails.Sum(a => a.total);
+        //        decimal kioskTotalAmount = amountDetails.Sum(a => a.total);
 
-                var requestBody = new
-                {
-                    kioskId = AppSession.KioskId,
-                    kioskRegId = AppSession.KioskRegId,
-                    customerRegId = AppSession.CustomerRegId,
-                    kioskTotalAmount = kioskTotalAmount,
-                    amountDetails = amountDetails
-                };
+        //        var requestBody = new
+        //        {
+        //            kioskId = AppSession.KioskId,
+        //            kioskRegId = AppSession.KioskRegId,
+        //            customerRegId = AppSession.CustomerRegId,
+        //            kioskTotalAmount = kioskTotalAmount,
+        //            amountDetails = amountDetails
+        //        };
 
-                //var requestBody = new
-                //{
-                //    kioskId = 3,
-                //    kioskRegId = 63,
-                //    customerRegId = 27,
-                //    kioskTotalAmount = 1,
-                //    amountDetails = new[]
-                //    {
-                //        new
-                //        {
-                //            denomination = 1,
-                //            count = 1,
-                //            total = 1
-                //        }
-                //    }
-                //};
+        //        //var requestBody = new
+        //        //{
+        //        //    kioskId = 3,
+        //        //    kioskRegId = 63,
+        //        //    customerRegId = 27,
+        //        //    kioskTotalAmount = 1,
+        //        //    amountDetails = new[]
+        //        //    {
+        //        //        new
+        //        //        {
+        //        //            denomination = 1,
+        //        //            count = 1,
+        //        //            total = 1
+        //        //        }
+        //        //    }
+        //        //};
 
-                Logger.Log("📤 Sending transaction request to API...");
-                string jsonPayload = JsonConvert.SerializeObject(requestBody);
-                Logger.Log($"📦 Payload: {jsonPayload}");
+        //        Logger.Log("📤 Sending transaction request to API...");
+        //        string jsonPayload = JsonConvert.SerializeObject(requestBody);
+        //        Logger.Log($"📦 Payload: {jsonPayload}");
 
-                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+        //        var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
-                client.DefaultRequestHeaders.Accept.Clear();
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-                client.DefaultRequestHeaders.UserAgent.ParseAdd("PostmanRuntime/7.35.0");
-                client.DefaultRequestHeaders.Remove("Authorization");
-                client.DefaultRequestHeaders.Add("Authorization", $"{ApiService.AuthToken}");
-                client.DefaultRequestHeaders.Add("Cookie", "JSESSIONID=C4537CD8D22C7AF20A50A08992FD3EFF; Path=/; Secure; HttpOnly");
+        //        client.DefaultRequestHeaders.Accept.Clear();
+        //        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        //        client.DefaultRequestHeaders.UserAgent.ParseAdd("PostmanRuntime/7.35.0");
+        //        client.DefaultRequestHeaders.Remove("Authorization");
+        //        client.DefaultRequestHeaders.Add("Authorization", $"{ApiService.AuthToken}");
+        //        client.DefaultRequestHeaders.Add("Cookie", "JSESSIONID=C4537CD8D22C7AF20A50A08992FD3EFF; Path=/; Secure; HttpOnly");
 
-                // 1. Perform the network call
-                HttpResponseMessage response = await client.PostAsync(apiUrl, content);
-                string responseText = await response.Content.ReadAsStringAsync();
-                    Logger.Log($"📬 API Response: {responseText}");
-                var result = JsonConvert.DeserializeObject<dynamic>(responseText);
+        //        // 1. Perform the network call
+        //        HttpResponseMessage response = await client.PostAsync(apiUrl, content);
+        //        string responseText = await response.Content.ReadAsStringAsync();
+        //            Logger.Log($"📬 API Response: {responseText}");
+        //        var result = JsonConvert.DeserializeObject<dynamic>(responseText);
 
-                // 2. Perform the printing (still in the background)
-                if (result != null)
-                {
-                    var receiptData = new LocalRequestBean
-                    {
-                        operation = "bankadd",
-                        kioskTotalAmount = kioskTotalAmount,
-                        isSucceed = (bool)result.isSucceed,
-                        printmessage = (string)result.message,
-                        feeAmount = ((bool)result.isSucceed && result.data?.cryptoConversionFee != null) ? (decimal)result.data.cryptoConversionFee : 0.00m
-                    };
-                    var printer = new ReceiptPrinter(receiptData);
-                    printer.printReceipt(); // This no longer blocks the UI!
-                }
+        //        // 2. Perform the printing (still in the background)
+        //        if (result != null)
+        //        {
+        //            var receiptData = new LocalRequestBean
+        //            {
+        //                operation = "bankadd",
+        //                kioskTotalAmount = kioskTotalAmount,
+        //                isSucceed = (bool)result.isSucceed,
+        //                printmessage = (string)result.message,
+        //                feeAmount = ((bool)result.isSucceed && result.data?.cryptoConversionFee != null) ? (decimal)result.data.cryptoConversionFee : 0.00m
+        //            };
+        //            var printer = new ReceiptPrinter(receiptData);
+        //            printer.printReceipt(); // This no longer blocks the UI!
+        //        }
 
-                return (result, kioskTotalAmount);
-            }
-        }
+        //        return (result, kioskTotalAmount);
+        //    }
+        //}
 
         private async void ConfirmButton_Click(object sender, EventArgs e)
         {
@@ -357,9 +357,29 @@ namespace NV22SpectralInteg.Dashboard
 
                 // 2. Run ALL slow operations in the background and wait for the result.
                 // The UI thread remains responsive and the GIF animates smoothly.
-                var (result, kioskTotalAmount) = await Task.Run(() => PerformTransactionInBackgroundAsync());
+                var result = await Task.Run(async () =>
+                {
+                    // Call the new, centralized method in ApiService
+                    var apiResult = await ApiService.PersistTransactionAsync(_validator.NoteEscrowCounts);
 
-                // 3. Once the background task is complete, close the processing popup.
+                    // Perform printing in the background after the API call
+                    if (apiResult != null && (bool)apiResult.isSucceed)
+                    {
+                        var receiptData = new LocalRequestBean
+                        {
+                            operation = "bankadd",
+                            kioskTotalAmount = currentGrandTotal, // Use the total from the dashboard
+                            isSucceed = (bool)apiResult.isSucceed,
+                            printmessage = (string)apiResult.message,
+                            feeAmount = (apiResult.data?.cryptoConversionFee != null) ? (decimal)apiResult.data.cryptoConversionFee : 0.00m
+                        };
+                        var printer = new ReceiptPrinter(receiptData);
+                        printer.printReceipt();
+                    }
+                    return apiResult;
+                });
+
+                // 3. Close the processing popup.
                 processingPopup.Close();
 
                 // 4. Check the result and show the final popup.
@@ -400,12 +420,14 @@ namespace NV22SpectralInteg.Dashboard
 
                 if (successPopup.DialogResult == DialogResult.OK)
                 {
+                    Logger.Log("Add more button clicked for add transaction.");
                     UpdateBalanceDisplay();
                     ResetForNewTransaction();
                     MainLoop();
                 }
                 else
                 {
+                    Logger.Log("(Transaction completed) Manual logout initiated by user.");
                     FinalizeAndReturnToLogin();
                 }
             }
@@ -413,6 +435,7 @@ namespace NV22SpectralInteg.Dashboard
             {
                 if (successPopup.DialogResult == DialogResult.Cancel)
                 {
+                    Logger.Log("(Transaction failed) Manual logout initiated by user.");
                     FinalizeAndReturnToLogin();
                 }
             }
@@ -427,7 +450,7 @@ namespace NV22SpectralInteg.Dashboard
             Program.mainLoginForm.ResetToLogin();
             Program.mainLoginForm.Show();
 
-            this.Hide();
+            //this.Hide();
             this.Close();
         }
 
@@ -473,7 +496,7 @@ namespace NV22SpectralInteg.Dashboard
 
             notesTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33f));
             notesTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33f));
-            notesTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33f));
+            notesTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.34f));
 
             AddStyledCell(notesTable, "Note", 0, 0, header: true, alignment: ContentAlignment.MiddleCenter, isGrandTotalRow: false);
             AddStyledCell(notesTable, "Count", 1, 0, header: true, alignment: ContentAlignment.MiddleCenter, isGrandTotalRow: false);

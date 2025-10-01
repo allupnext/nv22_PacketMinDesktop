@@ -173,4 +173,111 @@ public static class ApiService
         }
     }
 
+    public static async Task<dynamic> PersistTransactionAsync(IReadOnlyDictionary<string, int> noteCounts)
+    {
+
+        string apiUrl = $"{BaseUrl}/user/transaction/persist";
+
+        try
+        {
+            var amountDetails = noteCounts
+                .Select(kvp =>
+                {
+                    string key = kvp.Key;
+                    int count = kvp.Value;
+                    // This logic correctly extracts the denomination number from strings like "100 INR"
+                    var denominationMatch = System.Text.RegularExpressions.Regex.Match(key, @"\d+");
+                    int denomination = denominationMatch.Success && int.TryParse(denominationMatch.Value, out var d) ? d : 0;
+                    return new { denomination, count, total = denomination * count };
+                })
+                .ToList();
+
+            decimal kioskTotalAmount = amountDetails.Sum(a => a.total);
+
+            var requestBody = new
+            {
+                kioskId = AppSession.KioskId,
+                kioskRegId = AppSession.KioskRegId,
+                customerRegId = AppSession.CustomerRegId,
+                kioskTotalAmount, 
+                amountDetails
+            };
+
+            Logger.Log("📤 Sending transaction request to API via ApiService...");
+            string jsonPayload = JsonConvert.SerializeObject(requestBody);
+            Logger.Log($"📦 Payload: {jsonPayload}");
+
+            var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+
+            HttpResponseMessage response = await client.PostAsync(apiUrl, content);
+            string responseText = await response.Content.ReadAsStringAsync();
+            Logger.Log($"📬 API Response: {responseText}");
+
+            return JsonConvert.DeserializeObject<dynamic>(responseText);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError("🚨 Exception in PersistTransactionAsync", ex);
+            // Return a failed response object so the UI can handle it gracefully
+            return JsonConvert.DeserializeObject<dynamic>($"{{ 'isSucceed': false, 'message': 'Error: {ex.Message}' }}");
+        }
+    }
+
+
+
+    public static async Task<bool> LogMachineAvailabilityAsync()
+    {
+        if (Status == "live")
+        {
+            string apiUrl = $"{BaseUrl}/machine/availability/log";
+            try
+            {
+                string currentLocalIp = SystemInfo.GetActiveLocalIpAddress();
+
+                if (currentLocalIp == "Not Found" || currentLocalIp == "Error")
+                {
+                    Logger.MachineLog($"🚨 Skipping availability log: Could not determine local IP address (Result: {currentLocalIp}).");
+                    return false;
+                }
+
+                var requestBody = new
+                {
+                    kioskId = AppSession.KioskId,
+                    ipAddress = currentLocalIp
+                };
+
+                string jsonPayload = JsonConvert.SerializeObject(requestBody);
+                Logger.MachineLog($"📦 Payload: {jsonPayload}");
+                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+                HttpResponseMessage response = await client.PostAsync(apiUrl, content);
+                string responseText = await response.Content.ReadAsStringAsync();
+                Logger.MachineLog($"📬 API Response: {responseText}");
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    Logger.MachineLog($"🚨 API Error while logging availability: {response.StatusCode}");
+                    return false;
+                }
+
+                var result = JsonConvert.DeserializeObject<dynamic>(responseText);
+                if (result == null || result.isSucceed != true)
+                {
+                    Logger.MachineLog("🚨 Failed to log machine availability: Invalid API response.");
+                    return false;
+                }
+
+                Logger.MachineLog("✅ Machine availability logged successfully.");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Logger.MachineLog("🚨 Exception in LogMachineAvailabilityAsync is:\n" + ex);
+                return false;
+            }
+        }
+        else
+        {
+            return true;
+        }
+    }
 }

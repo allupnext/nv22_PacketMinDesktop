@@ -700,7 +700,7 @@ namespace NV22SpectralInteg.Classes
                     m_cmd.CommandData[0] = CCommands.SSP_CMD_HOLD;
                     m_cmd.CommandDataLength = 1;
                     log?.AppendText($"Note held in escrow: {m_HoldCount}\r\n");
-                    Logger.Debug($"Note held in escrow: {m_HoldCount}");
+                    Logger.Log($"Note held in escrow: {m_HoldCount}");
 
                     if (!SendCommand(log))
                         return false;
@@ -757,7 +757,7 @@ namespace NV22SpectralInteg.Classes
                             else
                             {
                                 log.AppendText("Reading note...\r\n");
-                                Logger.Debug("Reading note...");
+                                Logger.Log("Reading note...");
                             }
                             i++;
                             break;
@@ -806,8 +806,8 @@ namespace NV22SpectralInteg.Classes
                             break;
 
                         default:
-                            // Only log unknown responses in debug, not for client
-                            Logger.Debug($"Unrecognized poll response: {m_cmd.ResponseData[i]}");
+                            // Only log unknown responses in Log, not for client
+                            Logger.Log($"Unrecognized poll response: {m_cmd.ResponseData[i]}");
                             break;
                     }
                 }

@@ -10,5 +10,8 @@ namespace NV22SpectralInteg
     {
         public string ComPort { get; set; }
         public bool IsDevelopment { get; set; }
+        public Dictionary<string, int> ScreenTimeouts { get; set; }
+        public int CounterTime { get; set; }
+
     }
 }

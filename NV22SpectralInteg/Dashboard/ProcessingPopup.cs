@@ -59,7 +59,7 @@ namespace NV22SpectralInteg.Dashboard
                 SizeMode = PictureBoxSizeMode.Zoom, // Use Zoom to scale it nicely within bounds
                 // Position and size the spinner dynamically
                 Width = (int)(popupWidth * 0.4), // 40% of popup width
-                Height = (int)(popupWidth * 0.4), // Keep it square
+                Height = (int)(popupWidth * 0.5), // Keep it square
                 // Center the spinner horizontally and below the message label
                 Location = new Point((popupWidth - (int)(popupWidth * 0.4)) / 2, messageLabel.Bottom)
             };
@@ -75,9 +75,9 @@ namespace NV22SpectralInteg.Dashboard
                 AutoSize = false,
                 Width = popupWidth,
                 Height = 40,
-                Location = new Point(0, spinner.Bottom + 10) // Below the spinner
+                Location = new Point(0, spinner.Bottom + 5) // Below the spinner
             };
-            this.Controls.Add(loadingTextLabel);
+            //this.Controls.Add(loadingTextLabel);
 
 
             // Adjust positions if elements overlap or are not centered as expected

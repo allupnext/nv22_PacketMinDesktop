@@ -19,6 +19,7 @@ namespace NV22SpectralInteg
             // To customize application configuration such as set high DPI settings or default font,
             // see https://aka.ms/applicationconfiguration.
             ApplicationConfiguration.Initialize();
+            KioskHeartbeatService.Initialize();
 
 
             string configPath = Path.Combine(Application.StartupPath, "config.json");
@@ -62,11 +63,16 @@ namespace NV22SpectralInteg
 
         public static void PerformLogout()
         {
+            // Log that the logout process has started.
+            Logger.Log("➡️ Performing global logout...");
+
             // This code looks for any open form that is NOT the login form and closes it.
             foreach (Form openForm in Application.OpenForms.Cast<Form>().ToList())
             {
-                if (openForm.Name != mainLoginForm.Name)
+                if (mainLoginForm != null && openForm.Name != mainLoginForm.Name)
                 {
+                    // Log the specific form being closed. This helps in debugging.
+                    Logger.Log($"   Closing form: {openForm.Name} (Type: {openForm.GetType().Name})");
                     openForm.Close();
                 }
             }
@@ -74,15 +80,20 @@ namespace NV22SpectralInteg
             // Reset and show the main login form
             if (mainLoginForm != null && !mainLoginForm.IsDisposed)
             {
+                Logger.Log("   Resetting and showing the main login form.");
                 mainLoginForm.ResetToLogin();
                 mainLoginForm.Show();
                 mainLoginForm.Activate();
             }
             else // Failsafe in case the login form was somehow closed
             {
+                // Log a warning because this is unexpected behavior.
+                Logger.Log("⚠️ Main login form was null or disposed. Recreating a new instance as a failsafe.");
                 mainLoginForm = new LoginForm();
                 mainLoginForm.Show();
             }
+
+            Logger.Log("✅ Logout complete. Application returned to login screen.");
         }
     }
 }

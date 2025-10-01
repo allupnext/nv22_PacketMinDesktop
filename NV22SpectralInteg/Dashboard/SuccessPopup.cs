@@ -1,4 +1,5 @@
-﻿using NV22SpectralInteg.InactivityManager;
+﻿using Newtonsoft.Json;
+using NV22SpectralInteg.InactivityManager;
 using NV22SpectralInteg.Login;
 using System;
 using System.Collections.Generic;
@@ -15,6 +16,9 @@ namespace NV22SpectralInteg.Dashboard
 {
     public partial class SuccessPopup : Form
     {
+        private bool _isSucceed;
+        private readonly AppConfig config;
+
         // Constructor that accepts the name and amount to display
         public SuccessPopup(string recipientName, decimal amount, bool isSucceed, string message)
         {
@@ -22,8 +26,23 @@ namespace NV22SpectralInteg.Dashboard
             this.Shown += SuccessPopup_Shown;
             InitializeCustomComponents(recipientName, amount, isSucceed, message);
             KioskIdleManager.Initialize(Logout);
-            Logger.Log("✨ SuccessPopup created. Starting 7-second inactivity timer.");
-            KioskIdleManager.Start(7);
+
+            // Get the full path to the JSON file
+            string configPath = Path.Combine(Application.StartupPath, "config.json");
+            // Read the entire file into a string
+            string jsonContent = File.ReadAllText(configPath);
+            // Deserialize the JSON string into the class field
+            this.config = JsonConvert.DeserializeObject<AppConfig>(jsonContent);
+
+
+            int idleTime = config.ScreenTimeouts.ContainsKey("TransactionPopUp")
+               ? config.ScreenTimeouts["TransactionPopUp"]
+               : config.ScreenTimeouts["Default"];
+
+
+            Logger.Log($"✨ SuccessPopup created. Starting {idleTime}-second inactivity timer.");
+            KioskIdleManager.Start(idleTime, "Logout");
+
         }
         private void SuccessPopup_Shown(object sender, EventArgs e)
         {
@@ -46,6 +65,7 @@ namespace NV22SpectralInteg.Dashboard
         {
             // Make sure popup does not show in Alt+Tab
             this.ShowInTaskbar = false;
+            this._isSucceed = isSucceed;
 
             // ===== Form Styling =====
             this.FormBorderStyle = FormBorderStyle.None; // Removes the title bar and border
@@ -132,7 +152,7 @@ namespace NV22SpectralInteg.Dashboard
             {
                 Text = amount.ToString("C", new System.Globalization.CultureInfo("en-US")), // Formats as $1,200.00
                 Font = new Font("Poppins", 28F, FontStyle.Bold),
-                ForeColor = ColorTranslator.FromHtml("#25c866"),
+                ForeColor = isSucceed ? ColorTranslator.FromHtml("#25c866") : ColorTranslator.FromHtml("#FF0000"),
                 Size = new Size(this.ClientSize.Width - 40, 50),
                 BackColor = Color.White,
                 TextAlign = ContentAlignment.MiddleCenter,
@@ -248,6 +268,18 @@ namespace NV22SpectralInteg.Dashboard
             {
                 // Position the Log Out button for when it's the only one
                 logoutButtonPanel.Location = new Point((this.ClientSize.Width - 204) / 2, infoLabel.Bottom + 3);
+                logoutButton.BackColor = ColorTranslator.FromHtml("#FF0000");
+
+                logoutButton.MouseEnter += (sender, e) =>
+                {
+                    logoutButton.ForeColor = ColorTranslator.FromHtml("#FF0000");
+                    logoutButtonPanel.Invalidate(); // Trigger panel's Paint event to draw border
+                };
+                logoutButton.MouseLeave += (sender, e) =>
+                {
+                    logoutButton.ForeColor = Color.White;
+                    logoutButtonPanel.Invalidate(); // Trigger panel's Paint event to remove border
+                };
             }
 
             // Add all controls to the form
@@ -344,7 +376,7 @@ namespace NV22SpectralInteg.Dashboard
                     path.AddArc(new Rectangle(borderRect.Left, borderRect.Bottom - cornerRadius, cornerRadius, cornerRadius), 90, 90);
                     path.CloseFigure();
 
-                    using (Pen borderPen = new Pen(ColorTranslator.FromHtml("#25c866"), 3)) // Green border, 2px thick
+                    using (Pen borderPen = new Pen(_isSucceed ? ColorTranslator.FromHtml("#25c866") : ColorTranslator.FromHtml("#FF0000"), 3)) // Green border, 2px thick
                     {
                         e.Graphics.DrawPath(borderPen, path);
                     }

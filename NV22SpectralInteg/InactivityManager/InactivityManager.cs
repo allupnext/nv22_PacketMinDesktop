@@ -30,6 +30,8 @@ namespace NV22SpectralInteg.InactivityManager
         private static bool _isStarted = false;
         private static bool _isCountingDown = false;
 
+        internal static string _currentActionType;
+
         /// <summary>
         /// Initializes the InactivityManager. Must be called once when the application starts.
         /// </summary>
@@ -53,7 +55,7 @@ namespace NV22SpectralInteg.InactivityManager
         /// Call this in the Load or Activated event of each form that requires a timeout.
         /// </summary>
         /// <param name="timeoutSeconds">The number of seconds of inactivity before showing the warning.</param>
-        public static void Start(int timeoutSeconds)
+        public static void Start(int timeoutSeconds, string actionType)
         {
             if (timeoutSeconds <= 0)
             {
@@ -62,6 +64,7 @@ namespace NV22SpectralInteg.InactivityManager
             }
 
              _maxInactivitySeconds = timeoutSeconds;
+            _currentActionType = actionType;
             _isStarted = true;
 
             ResetTimer();
@@ -120,7 +123,7 @@ namespace NV22SpectralInteg.InactivityManager
 
             if (_currentCountdownValue > 0)
             {
-                _countdownForm?.UpdateMessage($"Logging out in {_currentCountdownValue} seconds...");
+                _countdownForm?.UpdateMessage(GetCountdownMessage(_currentCountdownValue));
             }
             else
             {
@@ -132,7 +135,17 @@ namespace NV22SpectralInteg.InactivityManager
 
 
         // In InactivityManager/KioskIdleManager.cs
-
+        private static string GetCountdownMessage(int seconds)
+        {
+            switch (_currentActionType)
+            {
+                case "AutoConfirm":
+                    return $"Auto Confirming in {seconds} seconds...";
+                case "Logout":
+                default:
+                    return $"Logging out in {seconds} seconds...";
+            }
+        }
         private static void ShowCountdownForm()
         {
             if (_countdownForm == null || _countdownForm.IsDisposed)
@@ -143,7 +156,7 @@ namespace NV22SpectralInteg.InactivityManager
             // ✅ SAFETY CHECK: Only try to show the form if it is not already visible.
             if (!_countdownForm.Visible)
             {
-                _countdownForm.UpdateMessage($"Logging out in {CountdownDurationSeconds} seconds...");
+                _countdownForm.UpdateMessage(GetCountdownMessage(CountdownDurationSeconds));
 
                 Form ownerForm = Application.OpenForms.Cast<Form>().FirstOrDefault(f => f.Visible);
 

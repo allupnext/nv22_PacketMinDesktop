@@ -1,4 +1,11 @@
 {
   "ComPort": "COM7",
-  "IsDevelopment": false
+  "IsDevelopment": true,
+  "ScreenTimeouts": {
+    "LoginScreen": 10,
+    "PrivacyPolicyScreen": 5,
+    "DashboardScreen": 15,
+    "TransactionPopUp": 7,
+    "Default": 10
+  }
 }

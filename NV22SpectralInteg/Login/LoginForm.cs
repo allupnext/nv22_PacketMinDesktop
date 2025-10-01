@@ -1,5 +1,9 @@
 ﻿using Newtonsoft.Json;
 using NV22SpectralInteg.Classes;
+using NV22SpectralInteg.Dashboard;
+using NV22SpectralInteg.InactivityManager;
+using NV22SpectralInteg.NumPad;
+using NV22SpectralInteg.Services;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -7,13 +11,10 @@ using System.Data;
 using System.Drawing;
 using System.Linq;
 using System.Net.Http.Headers;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using NV22SpectralInteg.Services;
-using System.Runtime.InteropServices;
-using NV22SpectralInteg.NumPad;
-using NV22SpectralInteg.InactivityManager;
 
 namespace NV22SpectralInteg.Login
 {
@@ -564,8 +565,12 @@ namespace NV22SpectralInteg.Login
             {
                 Logger.Log("OTP sent successfully. Showing OTP verification controls. ✅");
 
-                Logger.Log("✨ In Login OTP sent so Starting KioskIdleManager with 10-second timeout for OTP screen.");
-                KioskIdleManager.Start(10);
+                int idleTime = config.ScreenTimeouts.ContainsKey("LoginScreen")
+                    ? config.ScreenTimeouts["LoginScreen"]
+                    : config.ScreenTimeouts["Default"];
+
+                Logger.Log($"✨ In Login OTP sent so Starting KioskIdleManager with {idleTime}-second timeout for OTP screen.");
+                KioskIdleManager.Start(idleTime, "Logout");
 
                 // Hide ONLY the login button
                 loginButton.Visible = false;
@@ -593,6 +598,7 @@ namespace NV22SpectralInteg.Login
                 // Optional: If sending the OTP fails, you might want to restart the timer
                 // with the original short timeout.
 
+                Logger.Log("✨ In Login OTP send failed so Starting KioskIdleManager with 10-second timeout to return to login screen.");
                 ResetToLogin();
             }
         }
@@ -644,8 +650,13 @@ namespace NV22SpectralInteg.Login
                 KioskIdleManager.Initialize(Program.PerformLogout);
 
                 // START the 10 - second timer for the Privacy Policy.
-                Logger.Log("✨ Starting 10-second timer for Privacy Policy.");
-                KioskIdleManager.Start(10);
+                int idleTime = config.ScreenTimeouts.ContainsKey("PrivacyPolicyScreen")
+                   ? config.ScreenTimeouts["PrivacyPolicyScreen"]
+                   : config.ScreenTimeouts["Default"];
+
+                Logger.Log($"✨ Starting {idleTime}-second timer for Privacy Policy.");
+                KioskIdleManager.Start(idleTime, "Logout");
+
 
                 var terms = new NV22SpectralInteg.PrivacyPolicy.PrivacyPolicyWindow(dashboard);
                 var result = terms.ShowDialog(dashboard); // This makes the policy appear over the dashboard.
@@ -658,9 +669,13 @@ namespace NV22SpectralInteg.Login
                     Logger.Log("Privacy Policy accepted ✅. Starting dashboard main loop.");
                     KioskIdleManager.Initialize(dashboard.PerformTransaction);
                     // START the 20 - second timer for the Dashboard.
-                    Logger.Log("✨ Starting 10-second timer for Dashboard.");
-                    KioskIdleManager.Start(10);
-                    
+                    int idleDTime = config.ScreenTimeouts.ContainsKey("DashboardScreen")
+                   ? config.ScreenTimeouts["DashboardScreen"]
+                   : config.ScreenTimeouts["Default"];
+
+                    Logger.Log($"✨ Starting {idleDTime}-second timer for Dashboard.");
+                    KioskIdleManager.Start(idleDTime, "Logout");
+
                     dashboard.MainLoop();
                 }
                 else
@@ -670,6 +685,7 @@ namespace NV22SpectralInteg.Login
                     {
                         dashboard.Close();
                     }
+                    Logger.Log("✨ In Login Privacy Policy not accepted so Starting KioskIdleManager with 10-second timeout to return to login screen.");
                     this.ResetToLogin();
                     this.Show();
                 }
@@ -689,6 +705,9 @@ namespace NV22SpectralInteg.Login
             Logger.Log("Resetting login form to initial state 🔄");
             Logger.Log("✨ In ResetToLogin Stopping KioskIdleManager");
             KioskIdleManager.Stop();
+
+            Logger.LogSeparator("USER Logout");
+            KioskIdleManager.Initialize(Program.PerformLogout);
 
             // Reset the main title
             subtitle.Text = "Login";

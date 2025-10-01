@@ -11,7 +11,7 @@ namespace NV22SpectralInteg
     {
         private static readonly string logDirectory;
         private static readonly string errorLogDirectory;
-        private static readonly string debugLogDirectory;
+        private static readonly string machineAvailabilityDirectory;
         private static readonly object logLock = new object();
 
         static Logger()
@@ -22,7 +22,7 @@ namespace NV22SpectralInteg
 
                 logDirectory = Path.Combine(basePath, "Logs");
                 errorLogDirectory = Path.Combine(basePath, "ErrorLogs");
-                debugLogDirectory = Path.Combine(basePath, "DebugLogs");
+                machineAvailabilityDirectory = Path.Combine(basePath, "MachineAvailabilityLogs");
 
                 if (!Directory.Exists(logDirectory))
                     Directory.CreateDirectory(logDirectory);
@@ -30,8 +30,9 @@ namespace NV22SpectralInteg
                 if (!Directory.Exists(errorLogDirectory))
                     Directory.CreateDirectory(errorLogDirectory);
 
-                if (!Directory.Exists(debugLogDirectory))
-                    Directory.CreateDirectory(debugLogDirectory);
+                if (!Directory.Exists(machineAvailabilityDirectory))
+                    Directory.CreateDirectory(machineAvailabilityDirectory);
+
             }
             catch
             {
@@ -44,9 +45,8 @@ namespace NV22SpectralInteg
 
         private static string GetErrorLogFilePath() =>
             Path.Combine(errorLogDirectory, $"error_log_{DateTime.Now:yyyy-MM-dd}.txt");
-
-        private static string GetDebugLogFilePath() =>
-            Path.Combine(debugLogDirectory, $"debug_log_{DateTime.Now:yyyy-MM-dd}.txt");
+        private static string GetmachineAvailabilityLogFilePath() =>
+            Path.Combine(machineAvailabilityDirectory, $"machineAvailability_log_{DateTime.Now:yyyy-MM-dd}.txt");
 
         public static void Log(string message)
         {
@@ -63,20 +63,20 @@ namespace NV22SpectralInteg
                 Console.WriteLine("Log write failed: " + ex.Message);
             }
         }
-
-        public static void Debug(string message)
+        
+        public static void MachineLog(string message)
         {
             try
             {
-                string debugEntry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [DEBUG] {message}";
+                string logEntry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}]   {message}";
                 lock (logLock)
                 {
-                    File.AppendAllText(GetDebugLogFilePath(), debugEntry + Environment.NewLine);
+                    File.AppendAllText(GetmachineAvailabilityLogFilePath(), logEntry + Environment.NewLine);
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Debug log write failed: " + ex.Message);
+                Console.WriteLine("Log write failed: " + ex.Message);
             }
         }
 
@@ -152,6 +152,43 @@ namespace NV22SpectralInteg
                     separator + Environment.NewLine);
             }
             catch { }
+        }
+
+        public static void LogSeparator(string title = null, char character = '═', int length = 70)
+        {
+            try
+            {
+                string separator;
+
+                // If no title is provided, just create a simple line.
+                if (string.IsNullOrWhiteSpace(title))
+                {
+                    separator = new string(character, length);
+                }
+                else
+                {
+                    // If a title is provided, center it within the separator line.
+                    string paddedTitle = $" {title.ToUpper()} ";
+                    int sideLength = (length - paddedTitle.Length) / 2;
+
+                    // Ensure sideLength is not negative if the title is too long.
+                    if (sideLength < 0) sideLength = 0;
+
+                    string sides = new string(character, sideLength);
+                    separator = $"{sides}{paddedTitle}{sides}";
+                }
+
+                // Lock for thread safety, just like your other log methods.
+                lock (logLock)
+                {
+                    // Add new lines before and after for clear visual separation.
+                    File.AppendAllText(GetLogFilePath(), Environment.NewLine + separator + Environment.NewLine + Environment.NewLine);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Log separator write failed: " + ex.Message);
+            }
         }
     }
 }
