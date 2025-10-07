@@ -42,7 +42,7 @@ public static class ApiService
 
     public static async Task<(bool Success, string ErrorMessage)> ValidateAndSetKioskSessionAsync(string kioskId)
     {
-        if(Status == "live")
+        if (Status == "live")
         {
             string apiUrl = $"{BaseUrl}/get/kiosks/details";
             try
@@ -63,17 +63,17 @@ public static class ApiService
                 }
 
                 var result = JsonConvert.DeserializeObject<dynamic>(responseText);
-                if (result == null || result.isSucceed != true || result.data == null)
+                if (result == null || result?.isSucceed != true || result?.data == null)
                 {
                     return (false, "Invalid Kiosk ID or API response.");
                 }
 
-                AppSession.KioskId = result.data.KIOSKID;
-                AppSession.KioskRegId = result.data.REGID;
-                AppSession.StoreName = result.data.KIOSKNAME;
-                AppSession.StoreAddress = $"{result.data.ADDRESS}, {result.data.CITY}, {result.data.LOCATION}, {result.data.ZIPCODE}";
+                AppSession.KioskId = result?.data.KIOSKID;
+                AppSession.KioskRegId = result?.data.REGID;
+                AppSession.StoreName = result?.data.KIOSKNAME;
+                AppSession.StoreAddress = $"{result?.data.ADDRESS}, {result?.data.CITY}, {result?.data.LOCATION}, {result?.data.ZIPCODE}";
 
-                return (true, null);
+                return (true, string.Empty); // Updated to return a non-null string
             }
             catch (Exception ex)
             {
@@ -83,7 +83,7 @@ public static class ApiService
         }
         else
         {
-            return (true, null);
+            return (true, string.Empty); // Updated to return a non-null string
         }
     }
 
@@ -97,6 +97,11 @@ public static class ApiService
 
         // --- 1. Determine Date Range ---
         // StartTime is the EndDate of the LAST successful report (or DateTime.MinValue for the first run)
+        if (string.IsNullOrEmpty(AppSession.KioskId))
+        {
+            Logger.Log("KioskId is null or empty. Cannot retrieve last report end date.");
+            return false; // Or handle this case appropriately based on your application's logic
+        }
         var data = TransactionRepository.GetLastReportEndDate(AppSession.KioskId);
         DateTime startTime = data.startTime;
 
@@ -149,10 +154,10 @@ public static class ApiService
             if (response.IsSuccessStatusCode)
             {
                 var result = JsonConvert.DeserializeObject<dynamic>(responseText);
-                if (result != null && result.isSucceed == true)
+                if (result != null && result?.isSucceed == true)
                 {
                     // --- 5. CRITICAL: Save the successful report marker in the DB ---
-                    TransactionRepository.SaveSettlementReport(AppSession.KioskId, settlementCode, startTime, endTime);
+                    TransactionRepository.SaveSettlementReport(AppSession.KioskId, settlementCode, startTime, "");
                     Logger.Log($"✅ Settlement report successful. Report marker saved in DB.");
                     return true;
                 }
@@ -168,7 +173,7 @@ public static class ApiService
         }
     }
 
-    
+
     public static async Task<bool> SendOtpAsync(string mobileNo)
     {
         // For demonstration, returning true. Uncomment your real logic here.
@@ -178,6 +183,11 @@ public static class ApiService
             string apiUrl = $"{BaseUrl}/send/user/mobileno/otp";
             try
             {
+                if (string.IsNullOrEmpty(AppSession.KioskId))
+                {
+                    Logger.Log("KioskId is null or empty. Cannot retrieve last report end date.");
+                    return false; // Or handle this case appropriately based on your application's logic
+                }
                 var payload = new { mobileNo, kioskId = int.Parse(AppSession.KioskId) };
                 string jsonPayload = JsonConvert.SerializeObject(payload);
                 Logger.Log($"📦 Payload: {jsonPayload}");
@@ -189,9 +199,9 @@ public static class ApiService
                 Logger.Log($"📬 API Response: {responseText}");
 
                 var result = JsonConvert.DeserializeObject<dynamic>(responseText);
-                if (result != null && result.isSucceed == true)
+                if (result != null && result?.isSucceed == true)
                 {
-                    AppSession.smsId = result.smsId;
+                    AppSession.smsId = result?.smsId;
                     return true;
                 }
                 return false;
@@ -201,8 +211,6 @@ public static class ApiService
                 Logger.LogError("Exception in SendOtpAsync", ex);
                 return false;
             }
-
-            return await Task.FromResult(true); // Mock success
         }
         else
         {
@@ -219,6 +227,11 @@ public static class ApiService
             string apiUrl = $"{BaseUrl}/validate/user/mobileno/otp";
             try
             {
+                if (string.IsNullOrEmpty(AppSession.KioskId))
+                {
+                    Logger.Log("KioskId is null or empty. Cannot retrieve last report end date.");
+                    return false; // Or handle this case appropriately based on your application's logic
+                }
                 var payload = new
                 {
                     mobileNo,
@@ -236,11 +249,11 @@ public static class ApiService
                 Logger.Log($"📬 API Response: {responseText}");
 
                 var result = JsonConvert.DeserializeObject<dynamic>(responseText);
-                if (result != null && result.isSucceed == true && result.data != null)
+                if (result != null && result?.isSucceed == true && result?.data != null)
                 {
-                    AppSession.CustomerRegId = result.data.REGID;
-                    AppSession.CustomerName = result.data.NAME;
-                    AppSession.CustomerBALANCE = result.data.BALANCE;
+                    AppSession.CustomerRegId = result?.data.REGID;
+                    AppSession.CustomerName = result?.data.NAME;
+                    AppSession.CustomerBALANCE = result?.data.BALANCE;
                     return true;
                 }
                 return false;
@@ -250,8 +263,6 @@ public static class ApiService
                 Logger.LogError("Exception in VerifyOtpAsync", ex);
                 return false;
             }
-
-            return await Task.FromResult(true); // Mock success
         }
         else
         {
@@ -301,13 +312,14 @@ public static class ApiService
             string responseText = await response.Content.ReadAsStringAsync();
             Logger.Log($"📬 API Response: {responseText}");
 
-            return JsonConvert.DeserializeObject<dynamic>(responseText);
+            // Updated the DeserializeObject calls to handle potential null values explicitly
+            return JsonConvert.DeserializeObject<dynamic>(responseText) ?? new { isSucceed = false, message = "Deserialization returned null" };
         }
         catch (Exception ex)
         {
             Logger.LogError("🚨 Exception in PersistTransactionAsync", ex);
             // Return a failed response object so the UI can handle it gracefully
-            return JsonConvert.DeserializeObject<dynamic>($"{{ 'isSucceed': false, 'message': 'Error: {ex.Message}' }}");
+            return JsonConvert.DeserializeObject<dynamic>($"{{ 'isSucceed': false, 'message': 'Error: {ex.Message}' }}") ?? new { isSucceed = false, message = "Deserialization returned null" };
         }
     }
 
@@ -403,7 +415,7 @@ public static class ApiService
                 }
 
                 var result = JsonConvert.DeserializeObject<dynamic>(responseText);
-                if (result == null || result.isSucceed != true)
+                if (result == null || result?.isSucceed != true)
                 {
                     Logger.MachineLog("🚨 Failed to log machine availability: Invalid API response.");
                     return false;

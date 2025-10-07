@@ -89,7 +89,13 @@ namespace NV22SpectralInteg.Login
 
             this.validator = new CValidator();
 
-            currentNumpad = new Numpad(null, "");
+            
+
+            currentNumpad = new Numpad(new TextBox(), "")
+            {
+                Owner = this // Set the owner for proper management
+            };
+            currentNumpad.Hide();
             currentNumpad.Owner = this; // Set the owner for proper management
             currentNumpad.Hide();
         }
@@ -534,7 +540,7 @@ namespace NV22SpectralInteg.Login
             stackPanel.Controls.Add(footer);
         }
 
-        private async void LoginButton_Click(object sender, EventArgs e)
+        private async void LoginButton_Click(object? sender, EventArgs e)
         {
             Logger.Log("Login button clicked (Send OTP) 🔑");
             currentNumpad.Close();
@@ -620,7 +626,7 @@ namespace NV22SpectralInteg.Login
             }
         }
 
-        private async void VerifyButton_Click(object sender, EventArgs e)
+        private async void VerifyButton_Click(object? sender, EventArgs e)
         {
             Logger.Log("Verify OTP button clicked 🔐");
             currentNumpad.Close();
@@ -757,21 +763,21 @@ namespace NV22SpectralInteg.Login
             CenterLoginUI(loginPanel);
         }
 
-        private void ShowNumpad(TextBox target, string targetName, TextBox[] otpBoxes = null, int currentIndex = -1)
+        private void ShowNumpad(TextBox target, string targetName, TextBox[]? otpBoxes = null, int currentIndex = -1)
         {
             // Check if the numpadInstance is null or has been disposed of.
             // If so, create a new instance.
             if (currentNumpad == null || currentNumpad.IsDisposed)
             {
                 // Pass the target into the constructor and store the new instance
-                currentNumpad = new Numpad(target, targetName, otpBoxes, currentIndex);
+                currentNumpad = new Numpad(target, targetName, otpBoxes ?? Array.Empty<TextBox>(), currentIndex);
                 currentNumpad.Owner = this; // Set the owner for proper management.
             }
             else
             {
                 // If the numpad is already open, simply update its target.
                 // The SetTarget method must be implemented in your Numpad class.
-                currentNumpad.SetTarget(target, targetName, otpBoxes, currentIndex);
+                currentNumpad.SetTarget(target, targetName, otpBoxes ?? Array.Empty<TextBox>(), currentIndex);
             }
 
             Point textBoxScreenLocation;
@@ -801,28 +807,26 @@ namespace NV22SpectralInteg.Login
 
 
         // Add these two new event handler methods to your class
-        private void ShowNumpad_Click(object sender, EventArgs e)
+        private void ShowNumpad_Click(object? sender, EventArgs e)
         {
-            TextBox currentTextBox = sender as TextBox;
-            int currentIndex = (int)currentTextBox.Tag;
-
-            // Call the shared method for the OTP fields
-            ShowNumpad(currentTextBox, "OTPNumber", otpTextBoxes, currentIndex);
+            if (sender is TextBox currentTextBox && currentTextBox.Tag is int currentIndex)
+            {
+                // Call the shared method for the OTP fields
+                ShowNumpad(currentTextBox, "OTPNumber", otpTextBoxes, currentIndex);
+            }
         }
 
-        private void OtpTextBox_Enter(object sender, EventArgs e)
+        private void OtpTextBox_Enter(object? sender, EventArgs e)
         {
-            TextBox currentTextBox = sender as TextBox;
-            if (currentTextBox?.Parent is Panel parentPanel)
+            if (sender is TextBox currentTextBox && currentTextBox.Parent is Panel parentPanel)
             {
                 ShowNumpad_Click(sender, e);
             }
         }
 
-        private void OtpTextBox_Leave(object sender, EventArgs e)
+        private void OtpTextBox_Leave(object? sender, EventArgs e)
         {
-            TextBox currentTextBox = sender as TextBox;
-            if (currentTextBox?.Parent is Panel parentPanel)
+            if (sender is TextBox currentTextBox && currentTextBox.Parent is Panel parentPanel)
             {
                 // Change the border color back to gray when the box is inactive
                 parentPanel.BackColor = Color.DimGray;
@@ -830,7 +834,7 @@ namespace NV22SpectralInteg.Login
         }
 
         // Helper Methods that were missing from your snippet
-        private void OtpTextBox_TextChanged(object sender, EventArgs e)
+        private void OtpTextBox_TextChanged(object? sender, EventArgs e)
         {
             var currentTextBox = sender as TextBox;
             if (currentTextBox == null) return;
@@ -849,16 +853,17 @@ namespace NV22SpectralInteg.Login
 
         }
 
-        private void OtpTextBox_KeyDown(object sender, KeyEventArgs e)
+        private void OtpTextBox_KeyDown(object? sender, KeyEventArgs e)
         {
             var currentTextBox = sender as TextBox;
-            if (currentTextBox == null) return;
+            if (currentTextBox == null || currentTextBox.Tag == null) return;
 
-            int currentIndex = (int)currentTextBox.Tag;
-
-            if (e.KeyCode == Keys.Back && currentTextBox.Text.Length == 0 && currentIndex > 0)
+            if (currentTextBox.Tag is int currentIndex)
             {
-                otpTextBoxes[currentIndex - 1].Focus();
+                if (e.KeyCode == Keys.Back && currentTextBox.Text.Length == 0 && currentIndex > 0)
+                {
+                    otpTextBoxes[currentIndex - 1].Focus();
+                }
             }
         }
 
@@ -894,7 +899,7 @@ namespace NV22SpectralInteg.Login
             countdownTimer.Start();
         }
 
-        private void CountdownTimer_Tick(object sender, EventArgs e)
+        private void CountdownTimer_Tick(object? sender, EventArgs e)
         {
             timeRemaining--;
             timerLabel.Text = $"00:{timeRemaining:00}";
@@ -908,7 +913,7 @@ namespace NV22SpectralInteg.Login
             }
         }
 
-        private async void ResendButton_Click(object sender, EventArgs e)
+        private async void ResendButton_Click(object? sender, EventArgs e)
         {
             Logger.Log("Resend OTP clicked. yeniden");
 
@@ -925,7 +930,7 @@ namespace NV22SpectralInteg.Login
             }
         }
 
-        private void LoginForm_Shown(object sender, EventArgs e)
+        private void LoginForm_Shown(object? sender, EventArgs e)
         {
             this.Opacity = 1;
             if (string.IsNullOrEmpty(AppSession.KioskId))
@@ -1122,9 +1127,9 @@ namespace NV22SpectralInteg.Login
 
     public class CountryCode
     {
-        public string Name { get; set; }
-        public string DialCode { get; set; }
-        public string DisplayName { get; set; }
+        public string? Name { get; set; }
+        public string? DialCode { get; set; }
+        public string? DisplayName { get; set; }
     }
 
     internal class NativeMethods

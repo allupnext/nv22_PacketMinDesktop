@@ -60,8 +60,8 @@ namespace NV22SpectralInteg.Data
                     KioskId TEXT PRIMARY KEY,
                     SettlementCode TEXT,
                     StartDate DATETIME,
-                    EndDate DATETIME,
-                    ReportGeneratedDate DATETIME
+                    ReportGeneratedDate DATETIME,
+                    ReportUrl TEXT
                 );";
 
                 using (var cmd = new SqliteCommand(createKioskMetadataTable, connection))
@@ -78,6 +78,23 @@ namespace NV22SpectralInteg.Data
                 {
                     cmd.ExecuteNonQuery();
                 }
+
+
+                //string insertKioskMetadata = @"
+                //    INSERT INTO KioskReport (KioskId, SettlementCode, StartDate, ReportGeneratedDate, ReportUrl)
+                //    VALUES (@KioskId, @SettlementCode, @StartDate, @ReportGeneratedDate, @ReportUrl);";
+
+                //using (var cmd = new SqliteCommand(insertKioskMetadata, connection))
+                //{
+                //    cmd.Parameters.AddWithValue("@KioskId", 3);
+                //    cmd.Parameters.AddWithValue("@SettlementCode", 229467);
+                //    cmd.Parameters.AddWithValue("@StartDate", "2025-10-06 08:00:00");
+                //    cmd.Parameters.AddWithValue("@ReportGeneratedDate", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+                //    cmd.Parameters.AddWithValue("@ReportUrl", "");
+
+                //    cmd.ExecuteNonQuery();
+                //}
+                
             }
         }
 
@@ -89,7 +106,7 @@ namespace NV22SpectralInteg.Data
             connection.Open();
 
             // 1. Check for the last successful report date in KioskReport
-            string selectLastReportDate = "SELECT EndDate FROM KioskReport WHERE KioskId = @KioskId ORDER BY EndDate DESC LIMIT 1;";
+            string selectLastReportDate = "SELECT ReportGeneratedDate FROM KioskReport WHERE KioskId = @KioskId ORDER BY ReportGeneratedDate DESC LIMIT 1;";
 
             using (var cmd = new SqliteCommand(selectLastReportDate, connection))
             {
@@ -126,22 +143,22 @@ namespace NV22SpectralInteg.Data
             return (DateTime.MinValue, true);
         }
 
-        public static void SaveSettlementReport(string kioskId, string settlementCode, DateTime startDate, DateTime endDate)
+        public static void SaveSettlementReport(string kioskId, string settlementCode, DateTime startDate, string ReportUrl)
         {
             using var connection = new SqliteConnection($"Data Source={DbPath}");
             connection.Open();
 
             string insertReport = @"
-            INSERT INTO KioskReport (KioskId, SettlementCode, StartDate, EndDate, ReportGeneratedDate)
-            VALUES (@KioskId, @SettlementCode, @StartDate, @EndDate, @ReportGeneratedDate);";
+            INSERT INTO KioskReport (KioskId, SettlementCode, StartDate, ReportGeneratedDate, ReportUrl)
+            VALUES (@KioskId, @SettlementCode, @StartDate, @ReportGeneratedDate, @ReportUrl);";
 
             using (var cmd = new SqliteCommand(insertReport, connection))
             {
                 cmd.Parameters.AddWithValue("@KioskId", kioskId);
                 cmd.Parameters.AddWithValue("@SettlementCode", settlementCode);
                 cmd.Parameters.AddWithValue("@StartDate", startDate.ToString("yyyy-MM-dd HH:mm:ss.fff"));
-                cmd.Parameters.AddWithValue("@EndDate", endDate.ToString("yyyy-MM-dd HH:mm:ss.fff"));
                 cmd.Parameters.AddWithValue("@ReportGeneratedDate", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+                cmd.Parameters.AddWithValue("@ReportUrl", ReportUrl);
 
                 cmd.ExecuteNonQuery();
             }
@@ -157,6 +174,12 @@ namespace NV22SpectralInteg.Data
             // Determine the START operator and the date value based on the start time.
             string startOperator;
             DateTime effectiveStartTime;
+
+            if (string.IsNullOrEmpty(AppSession.KioskId))
+            {
+                Logger.Log("KioskId is null or empty. Cannot retrieve last report end date.");
+                return false; // Or handle this case appropriately based on your application's logic
+            }
 
             var data = TransactionRepository.GetLastReportEndDate(AppSession.KioskId);
 

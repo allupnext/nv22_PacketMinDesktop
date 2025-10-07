@@ -1,6 +1,6 @@
 {
   "ComPort": "COM7",
-  "IsDevelopment": false,
+  "IsDevelopment": true,
   "ScreenTimeouts": {
     "LoginScreen": 10,
     "PrivacyPolicyScreen": 5,

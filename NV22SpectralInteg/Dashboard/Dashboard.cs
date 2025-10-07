@@ -48,7 +48,7 @@ namespace NV22SpectralInteg.Dashboard
             _validator = validator;
             this.config = config;
 
-            IsApiEnabled = !config.IsDevelopment;
+            IsApiEnabled = config.IsDevelopment;
 
             InitializeDashboardUI();
             timer1.Interval = pollTimer;
