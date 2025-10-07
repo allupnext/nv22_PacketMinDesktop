@@ -15,8 +15,8 @@ namespace NV22SpectralInteg.Services
         public static void Initialize()
         {
             _availabilityTimer = new System.Windows.Forms.Timer();
-            _availabilityTimer.Interval = IntervalMinutes * 60 * 1000; // 15 minutes
-            //_availabilityTimer.Interval = 10000; // 10 seconds for testing
+            //_availabilityTimer.Interval = IntervalMinutes * 60 * 1000; // 15 minutes
+            _availabilityTimer.Interval = 10000; // 10 seconds for testing
             _availabilityTimer.Tick += OnTimerTick;
             _availabilityTimer.Start();
 

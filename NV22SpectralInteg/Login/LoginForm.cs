@@ -546,6 +546,23 @@ namespace NV22SpectralInteg.Login
                 return;
             }
 
+            if (phoneTextBox.Text.Trim().Length == 6)
+            {
+                Logger.Log($"Attempting to validate settlementCode is : {phoneTextBox.Text} 🔐");
+
+                bool isValidSettlementCode = await ApiService.SubmitSettlementReportAsync(phoneTextBox.Text.Trim());
+                if (isValidSettlementCode) {
+                    Logger.Log("Settlement code is valid. ✅");
+                    return;
+                }
+                else
+                {
+                    Logger.Log("Invalid settlement code entered. ❌");
+                    MessageBox.Show("The settlement code you entered is invalid. Please try again.", "Validation Failed", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;  
+                }
+            }
+            
             fullMobileNumber = phonePrefix.Text.Trim() + phoneTextBox.Text.Trim();
             Logger.Log($"Attempting to send OTP to: {fullMobileNumber} 📲");
 

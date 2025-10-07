@@ -1,5 +1,8 @@
 ﻿// ApiService.cs
+using Microsoft.AspNetCore.Http;
+using Microsoft.Data.Sqlite;
 using Newtonsoft.Json;
+using NV22SpectralInteg.Data;
 using System;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -14,6 +17,7 @@ public static class ApiService
     internal const string BaseUrl = "https://uat.pocketmint.ai/api/kiosks";
     internal const string AuthToken = "a55cf4p6-e57a-3w20-8ag4-33s55d27ev78";
     private static string Status = "live";
+    private static string DbPath = Path.Combine(Application.StartupPath, "App_Data", "KioskTransactions.db");
 
     static ApiService()
     {
@@ -83,6 +87,88 @@ public static class ApiService
         }
     }
 
+
+    // In your API/Service class
+
+    public static async Task<bool> SubmitSettlementReportAsync(string settlementCode)
+    {
+        // Assuming these are available from your session/config
+        string apiUrl = $"{BaseUrl}/submit/settlement"; // Endpoint for submission
+
+        // --- 1. Determine Date Range ---
+        // StartTime is the EndDate of the LAST successful report (or DateTime.MinValue for the first run)
+        var data = TransactionRepository.GetLastReportEndDate(AppSession.KioskId);
+        DateTime startTime = data.startTime;
+
+        // EndTime is the current moment (inclusive)
+        DateTime endTime = DateTime.Now;
+
+        // If the difference is zero or negative (e.g., clock drift or immediate re-run), exit.
+        if (startTime >= endTime)
+        {
+            Logger.Log($"No new transactions since last report at {startTime}. Skipping submission.");
+            return true;
+        }
+
+        // --- 2. Gather Aggregated Data from DB ---
+        dynamic aggregatedData = TransactionRepository.GetAggregatedSettlementData(AppSession.KioskId, startTime, endTime);
+
+        if (aggregatedData.totalSettlementAmount <= 0)
+        {
+            Logger.Log("No financial transactions found in the specified period. Skipping submission.");
+            // Optional: If you skip, you can choose NOT to update the KioskReport table, 
+            // ensuring the next run checks the same period until money is deposited.
+            return true;
+        }
+        string currentLocalIp = SystemInfo.GetActiveLocalIpAddress();
+
+        // --- 3. Construct API Payload ---
+        var requestBody = new
+        {
+            storeRegId = AppSession.KioskRegId,
+            kioskId = AppSession.KioskId,
+            settlementCode = settlementCode,
+            startTime = startTime.ToString("yyyy-MM-ddTHH:mm:ss.fff"),
+            endTime = endTime.ToString("yyyy-MM-ddTHH:mm:ss.fff"),
+            totalDenominationDepository = aggregatedData.totalDenominationDepository,
+            totalSettlementAmount = aggregatedData.totalSettlementAmount,
+            kioskIpAddress = currentLocalIp
+        };
+
+        string jsonPayload = JsonConvert.SerializeObject(requestBody, Formatting.Indented);
+        Logger.Log($"📦 Settlement Payload: {jsonPayload}");
+
+        // --- 4. Send API Request ---
+        try
+        {
+            var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+            HttpResponseMessage response = await client.PostAsync(apiUrl, content);
+            string responseText = await response.Content.ReadAsStringAsync();
+            Logger.Log($"📬 API Response: {responseText}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = JsonConvert.DeserializeObject<dynamic>(responseText);
+                if (result != null && result.isSucceed == true)
+                {
+                    // --- 5. CRITICAL: Save the successful report marker in the DB ---
+                    TransactionRepository.SaveSettlementReport(AppSession.KioskId, settlementCode, startTime, endTime);
+                    Logger.Log($"✅ Settlement report successful. Report marker saved in DB.");
+                    return true;
+                }
+            }
+
+            Logger.Log($"❌ Settlement submission failed. Status: {response.StatusCode}. Response: {responseText}");
+            return false;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError("Error submitting settlement report", ex);
+            return false;
+        }
+    }
+
+    
     public static async Task<bool> SendOtpAsync(string mobileNo)
     {
         // For demonstration, returning true. Uncomment your real logic here.
@@ -203,6 +289,8 @@ public static class ApiService
                 amountDetails
             };
 
+            SaveTransactionWithDetails(requestBody);
+
             Logger.Log("📤 Sending transaction request to API via ApiService...");
             string jsonPayload = JsonConvert.SerializeObject(requestBody);
             Logger.Log($"📦 Payload: {jsonPayload}");
@@ -222,6 +310,61 @@ public static class ApiService
             return JsonConvert.DeserializeObject<dynamic>($"{{ 'isSucceed': false, 'message': 'Error: {ex.Message}' }}");
         }
     }
+
+    public static void SaveTransactionWithDetails(dynamic requestBody)
+    {
+        string transactionId = Guid.NewGuid().ToString();
+
+        using var connection = new SqliteConnection($"Data Source={DbPath}");
+        connection.Open();
+
+        using var transaction = connection.BeginTransaction();
+
+        try
+        {
+            // Insert master transaction
+            string insertTransaction = @"
+            INSERT INTO Transactions (TransactionId, KioskId, KioskRegId, CustomerRegId, KioskTotalAmount)
+            VALUES (@TransactionId, @KioskId, @KioskRegId, @CustomerRegId, @KioskTotalAmount);";
+
+            using (var cmd = new SqliteCommand(insertTransaction, connection, transaction))
+            {
+                cmd.Parameters.AddWithValue("@TransactionId", transactionId);
+                cmd.Parameters.AddWithValue("@KioskId", (string)requestBody.kioskId ?? "");
+                cmd.Parameters.AddWithValue("@KioskRegId", (string)requestBody.kioskRegId ?? "");
+                cmd.Parameters.AddWithValue("@CustomerRegId", (string)requestBody.customerRegId ?? "");
+                cmd.Parameters.AddWithValue("@KioskTotalAmount", (decimal)requestBody.kioskTotalAmount);
+
+                cmd.ExecuteNonQuery();
+            }
+
+            // Insert each detail row
+            string insertDetail = @"
+            INSERT INTO TransactionDetails (TransactionId, Denomination, Count, Total)
+            VALUES (@TransactionId, @Denomination, @Count, @Total);";
+
+            foreach (var detail in requestBody.amountDetails)
+            {
+                using var cmd = new SqliteCommand(insertDetail, connection, transaction);
+                cmd.Parameters.AddWithValue("@TransactionId", transactionId);
+                cmd.Parameters.AddWithValue("@Denomination", (int)detail.denomination);
+                cmd.Parameters.AddWithValue("@Count", (int)detail.count);
+                cmd.Parameters.AddWithValue("@Total", (decimal)detail.total);
+
+                cmd.ExecuteNonQuery();
+            }
+
+            transaction.Commit();
+            Logger.Log($"✅ Transaction {transactionId} saved with {requestBody.amountDetails.Count} details.");
+        }
+        catch (Exception ex)
+        {
+            transaction.Rollback();
+            Logger.LogError($"❌ Failed to save transaction {transactionId}", ex);
+            throw;
+        }
+    }
+
 
 
 

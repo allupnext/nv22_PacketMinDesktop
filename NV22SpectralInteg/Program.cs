@@ -1,5 +1,6 @@
 ﻿using BCSKioskServerCrypto;
 using Newtonsoft.Json;
+using NV22SpectralInteg.Data;
 using NV22SpectralInteg.InactivityManager;
 using NV22SpectralInteg.Login;
 using NV22SpectralInteg.Services;
@@ -29,7 +30,8 @@ namespace NV22SpectralInteg
             AppConfig config = JsonConvert.DeserializeObject<AppConfig>(jsonContent);
             ApiService.Initialize(config);
 
-
+            SQLitePCL.Batteries_V2.Init();
+            TransactionRepository.EnsureDatabaseAndTable();
 
             // It creates the timers and prepares the manager for use.
             KioskIdleManager.Initialize(PerformLogout);

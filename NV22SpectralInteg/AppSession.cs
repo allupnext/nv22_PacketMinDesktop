@@ -8,10 +8,10 @@ namespace NV22SpectralInteg
 {
     public static class AppSession
     {
-        public static string KioskId { get; set; } = "3";
-        public static string KioskRegId { get; set; } = "63";
-        public static string CustomerRegId { get; set; } = "27";
-        public static string CustomerName { get; set; } = "None";
+        public static string KioskId { get; set; }
+        public static string KioskRegId { get; set; }
+        public static string CustomerRegId { get; set; }
+        public static string CustomerName { get; set; }
         public static string StoreName { get; set; } = null;
         public static string StoreAddress { get; set; } = null;
         public static decimal? StoreBalance { get; set; } = 0.00m;
@@ -25,7 +25,6 @@ namespace NV22SpectralInteg
 
         public static void Clear()
         {
-            KioskRegId = null;
             CustomerRegId = null;
             CustomerName = "None";
             StoreName = null;
