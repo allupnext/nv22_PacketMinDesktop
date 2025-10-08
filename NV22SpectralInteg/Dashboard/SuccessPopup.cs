@@ -17,14 +17,15 @@ namespace NV22SpectralInteg.Dashboard
     public partial class SuccessPopup : Form
     {
         private bool _isSucceed;
+        private string _status;
         private readonly AppConfig config;
 
         // Constructor that accepts the name and amount to display
-        public SuccessPopup(string recipientName, decimal amount, bool isSucceed, string message)
+        public SuccessPopup(string recipientName, decimal amount, bool isSucceed, string message, string status)
         {
             this.Opacity = 0;
             this.Shown += SuccessPopup_Shown;
-            InitializeCustomComponents(recipientName, amount, isSucceed, message);
+            InitializeCustomComponents(recipientName, amount, isSucceed, message,status);
             KioskIdleManager.Initialize(Logout);
 
             // Get the full path to the JSON file
@@ -61,17 +62,18 @@ namespace NV22SpectralInteg.Dashboard
             this.Close();
         }
 
-        private void InitializeCustomComponents(string recipientName, decimal amount, bool isSucceed, string message)
+        private void InitializeCustomComponents(string recipientName, decimal amount, bool isSucceed, string message, string status)
         {
             // Make sure popup does not show in Alt+Tab
             this.ShowInTaskbar = false;
             this._isSucceed = isSucceed;
+            this._status = status;
 
             // ===== Form Styling =====
             this.FormBorderStyle = FormBorderStyle.None; // Removes the title bar and border
             this.StartPosition = FormStartPosition.CenterParent; // Centers the popup over the parent form
             this.BackColor = ColorTranslator.FromHtml("#11150f");
-            this.ClientSize = new Size(500, 650);
+            this.ClientSize = (status == "pdf" ? new Size(500, 550) : new Size(500, 650));
             this.Padding = new Padding(20);
 
             // ===== Controls =====
@@ -158,128 +160,48 @@ namespace NV22SpectralInteg.Dashboard
                 TextAlign = ContentAlignment.MiddleCenter,
                 Height = 80,
                 Location = new Point(20, nameLabel.Bottom - 10),
+                Visible = !(status == "pdf") // Hide if status is "pdf"
             };
 
             // Receipt Info Message
             Label infoLabel = new Label
             {
                 Text = message,
-                Font = new Font("Poppins", 11F, FontStyle.Bold),
+                Font = (status == "pdf" ? new Font("Poppins", 15F, FontStyle.Bold) : new Font("Poppins", 11F, FontStyle.Bold)),
                 ForeColor = ColorTranslator.FromHtml("#7e8088"),
                 BackColor = Color.White,
                 AutoSize = false,
                 Width = this.ClientSize.Width - 60, 
-                Height = 90,
+                Height = (status == "pdf" ? 45 : 90),
                 TextAlign = ContentAlignment.MiddleCenter,
-                Location = new Point((this.ClientSize.Width - (this.ClientSize.Width - 60)) / 2, amountLabel.Bottom + 10)
+                Location = new Point((this.ClientSize.Width - (this.ClientSize.Width - 60)) / 2, (status == "pdf" ? nameLabel.Bottom : amountLabel.Bottom) + 10)
             };
 
-            // --- Log Out Button and its container Panel ---
-            Panel logoutButtonPanel = new Panel
+            if (isSucceed && status == "pdf")
             {
-                Size = new Size(204, 66), // Slightly larger than the button for the border
-                Location = new Point(248, infoLabel.Bottom + 3), // Adjust position to center button
-                BackColor = Color.Transparent,
-                Tag = "logoutButton"
-            };
-
-            Button logoutButton = new Button
+                // Centered "Add New" button
+                Point centerPosition = new Point((this.ClientSize.Width - 200) / 2, infoLabel.Bottom + 10);
+                var addPanel = CreateButtonPanel("Ok", centerPosition, "addButton", ColorTranslator.FromHtml("#25c866"), DialogResult.OK);
+                this.Controls.Add(addPanel);
+            }
+            else if (isSucceed && status == "bankadd")
             {
-                Text = "Log Out",
-                Font = new Font("Poppins", 12F, FontStyle.Bold),
-                ForeColor = Color.White,
-                BackColor = ColorTranslator.FromHtml("#25c866"),
-                Size = new Size(200, 62),
-                Location = new Point(2, 2), // Position button inside panel
-                FlatStyle = FlatStyle.Flat
-            };
-            logoutButton.FlatAppearance.BorderSize = 0;
-            logoutButton.FlatAppearance.MouseOverBackColor = Color.White;
-            logoutButton.FlatAppearance.MouseDownBackColor = Color.White;
+                // Add New button on left
+                Point addPosition = new Point(38, infoLabel.Bottom + 3);
+                var addPanel = CreateButtonPanel("Add New", addPosition, "addButton", ColorTranslator.FromHtml("#25c866"), DialogResult.OK);
+                this.Controls.Add(addPanel);
 
-            // Create a rounded region for the button itself (the green part)
-            logoutButton.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, logoutButton.Width, logoutButton.Height, 12, 12));
-            logoutButton.Click += (sender, e) => { this.DialogResult = DialogResult.Cancel; };
-
-            logoutButtonPanel.Paint += ButtonPanel_Paint;
-            logoutButtonPanel.Controls.Add(logoutButton); // Add button to panel
-            this.Controls.Add(logoutButtonPanel); // Add panel to form
-
-            // LogoutButton hover events
-            logoutButton.MouseEnter += (sender, e) =>
-            {
-                logoutButton.ForeColor = ColorTranslator.FromHtml("#25c866");
-                logoutButtonPanel.Invalidate(); // Trigger panel's Paint event to draw border
-            };
-            logoutButton.MouseLeave += (sender, e) =>
-            {
-                logoutButton.ForeColor = Color.White;
-                logoutButtonPanel.Invalidate(); // Trigger panel's Paint event to remove border
-            };
-
-            if (isSucceed)
-            {
-                // 'Add New' Button
-                // --- Add New Button and its container Panel ---
-                Panel addButtonPanel = new Panel
-                {
-                    Size = new Size(204, 66), // Slightly larger than the button for the border
-                    Location = new Point(38, infoLabel.Bottom + 3), // Adjust position to center button
-                    BackColor = Color.Transparent, // Ensure panel background is transparent
-                    Tag = "addButton" // Give it a tag to identify later
-                };
-
-                Button addButton = new Button
-                {
-                    Text = "Add New",
-                    Font = new Font("Poppins", 12F, FontStyle.Bold),
-                    ForeColor = Color.White,
-                    BackColor = ColorTranslator.FromHtml("#25c866"),
-                    Size = new Size(200, 62),
-                    Location = new Point(2, 2), // Position button inside panel
-                    FlatStyle = FlatStyle.Flat
-                };
-                addButton.FlatAppearance.BorderSize = 0;
-                addButton.FlatAppearance.MouseOverBackColor = Color.White;
-                addButton.FlatAppearance.MouseDownBackColor = Color.White;
-                // Create a rounded region for the button itself (the green part)
-                addButton.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, addButton.Width, addButton.Height, 12, 12));
-                addButton.Click += (sender, e) => { this.DialogResult = DialogResult.OK; };
-
-                addButtonPanel.Paint += ButtonPanel_Paint;
-                addButtonPanel.Controls.Add(addButton); // Add button to panel
-                this.Controls.Add(addButtonPanel); // Add panel to form
-
-                // Handle hover color change and border
-
-                // AddButton hover events
-                addButton.MouseEnter += (sender, e) =>
-                {
-                    addButton.ForeColor = ColorTranslator.FromHtml("#25c866");
-                    addButtonPanel.Invalidate(); // Trigger panel's Paint event to draw border
-                };
-                addButton.MouseLeave += (sender, e) =>
-                {
-                    addButton.ForeColor = Color.White;
-                    addButtonPanel.Invalidate(); // Trigger panel's Paint event to remove border
-                };
+                // Log Out button on right
+                Point logoutPosition = new Point(248, infoLabel.Bottom + 3);
+                var logoutPanel = CreateButtonPanel("Log Out", logoutPosition, "logoutButton", ColorTranslator.FromHtml("#25c866"), DialogResult.Cancel);
+                this.Controls.Add(logoutPanel);
             }
             else
             {
-                // Position the Log Out button for when it's the only one
-                logoutButtonPanel.Location = new Point((this.ClientSize.Width - 204) / 2, infoLabel.Bottom + 3);
-                logoutButton.BackColor = ColorTranslator.FromHtml("#FF0000");
-
-                logoutButton.MouseEnter += (sender, e) =>
-                {
-                    logoutButton.ForeColor = ColorTranslator.FromHtml("#FF0000");
-                    logoutButtonPanel.Invalidate(); // Trigger panel's Paint event to draw border
-                };
-                logoutButton.MouseLeave += (sender, e) =>
-                {
-                    logoutButton.ForeColor = Color.White;
-                    logoutButtonPanel.Invalidate(); // Trigger panel's Paint event to remove border
-                };
+                // Only centered "Log Out" button in red
+                Point centerPosition = new Point((this.ClientSize.Width - 204) / 2, infoLabel.Bottom + 3);
+                var logoutPanel = CreateButtonPanel("Log Out", centerPosition, "logoutButton", ColorTranslator.FromHtml("#FF0000"), DialogResult.Cancel);
+                this.Controls.Add(logoutPanel);
             }
 
             // Add all controls to the form
@@ -287,9 +209,64 @@ namespace NV22SpectralInteg.Dashboard
             this.Controls.Add(logo); // or 'logo' if you have an image
             this.Controls.Add(thankYouLabel);
             this.Controls.Add(nameLabel);
-            this.Controls.Add(amountLabel);
+            // Only add amountLabel if visible
+            if (amountLabel.Visible)
+                this.Controls.Add(amountLabel);
             this.Controls.Add(infoLabel);
         }
+
+        private Panel CreateButtonPanel(string buttonText, Point panelLocation, string panelTag, Color buttonColor, DialogResult dialogResult, EventHandler clickEventHandler = null)
+        {
+            Panel buttonPanel = new Panel
+            {
+                Size = new Size(204, 66),
+                Location = panelLocation,
+                BackColor = Color.Transparent,
+                Tag = panelTag
+            };
+
+            Button button = new Button
+            {
+                Text = buttonText,
+                Font = new Font("Poppins", 12F, FontStyle.Bold),
+                ForeColor = Color.White,
+                BackColor = buttonColor,
+                Size = new Size(200, 62),
+                Location = new Point(2, 2),
+                FlatStyle = FlatStyle.Flat
+            };
+
+            button.FlatAppearance.BorderSize = 0;
+            button.FlatAppearance.MouseOverBackColor = Color.White;
+            button.FlatAppearance.MouseDownBackColor = Color.White;
+            button.Region = Region.FromHrgn(NativeMethods.CreateRoundRectRgn(0, 0, button.Width, button.Height, 12, 12));
+
+            // Default click behavior
+            button.Click += (sender, e) =>
+            {
+                this.DialogResult = dialogResult;
+                clickEventHandler?.Invoke(sender, e);
+            };
+
+            // Hover events
+            button.MouseEnter += (sender, e) =>
+            {
+                button.ForeColor = buttonColor;
+                buttonPanel.Invalidate();
+            };
+
+            button.MouseLeave += (sender, e) =>
+            {
+                button.ForeColor = Color.White;
+                buttonPanel.Invalidate();
+            };
+
+            buttonPanel.Paint += ButtonPanel_Paint;
+            buttonPanel.Controls.Add(button);
+
+            return buttonPanel;
+        }
+
 
         // Optional: Add code for rounded corners
         protected override void OnPaint(PaintEventArgs e)

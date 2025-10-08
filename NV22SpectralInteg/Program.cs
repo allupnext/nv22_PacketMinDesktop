@@ -1,5 +1,6 @@
 ﻿using BCSKioskServerCrypto;
 using Newtonsoft.Json;
+using NV22SpectralInteg.Dashboard;
 using NV22SpectralInteg.Data;
 using NV22SpectralInteg.InactivityManager;
 using NV22SpectralInteg.Login;
@@ -51,7 +52,8 @@ namespace NV22SpectralInteg
             //    operation = "bankadd",
             //    kioskTotalAmount = 100.00m,
             //    feeAmount = 8.00m,
-            //    isSucceed = true
+            //    isSucceed = true,
+            //    printmessage  = "You purchased $20.0 in crypto. Please check ypur PocketMint wallet linked to mobile ending 7717"
             //};
 
             //var printer = new ReceiptPrinter(dummyRequestBean);

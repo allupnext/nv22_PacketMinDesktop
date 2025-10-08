@@ -48,7 +48,7 @@ namespace NV22SpectralInteg.Dashboard
             _validator = validator;
             this.config = config;
 
-            IsApiEnabled = config.IsDevelopment;
+            IsApiEnabled = !config.IsDevelopment;
 
             InitializeDashboardUI();
             timer1.Interval = pollTimer;
@@ -405,7 +405,7 @@ namespace NV22SpectralInteg.Dashboard
         private void ShowResultAndPrintReceipt(dynamic result)
         {
 
-            var successPopup = new SuccessPopup(AppSession.CustomerName, currentGrandTotal, (bool)result.isSucceed, (string)result.message);
+            var successPopup = new SuccessPopup(AppSession.CustomerName, currentGrandTotal, (bool)result.isSucceed, (string)result.message, "bankadd");
             successPopup.ShowDialog(this);
 
             // Handle the user's choice from the popup

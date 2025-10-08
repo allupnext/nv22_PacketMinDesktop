@@ -37,7 +37,7 @@ namespace NV22SpectralInteg.Data
                 string createTransactionsTable = @"
                 CREATE TABLE IF NOT EXISTS Transactions (
                     TransactionId TEXT PRIMARY KEY,
-                    Timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    Timestamp DATETIME,
                     KioskId TEXT,
                     KioskRegId TEXT,
                     CustomerRegId TEXT, 
@@ -143,25 +143,29 @@ namespace NV22SpectralInteg.Data
             return (DateTime.MinValue, true);
         }
 
-        public static void SaveSettlementReport(string kioskId, string settlementCode, DateTime startDate, string ReportUrl)
+        public static void SaveSettlementReport(string kioskId, string settlementCode, DateTime startDate, DateTime ReportGeneratedDate, string ReportUrl)
         {
             using var connection = new SqliteConnection($"Data Source={DbPath}");
             connection.Open();
 
-            string insertReport = @"
-            INSERT INTO KioskReport (KioskId, SettlementCode, StartDate, ReportGeneratedDate, ReportUrl)
-            VALUES (@KioskId, @SettlementCode, @StartDate, @ReportGeneratedDate, @ReportUrl);";
+            using var transaction = connection.BeginTransaction();
 
-            using (var cmd = new SqliteCommand(insertReport, connection))
+            string insertReport = @"
+                INSERT INTO KioskReport (KioskId, SettlementCode, StartDate, ReportGeneratedDate, ReportUrl)
+                VALUES (@KioskId, @SettlementCode, @StartDate, @ReportGeneratedDate, @ReportUrl);";
+            
+            using (var cmd = new SqliteCommand(insertReport, connection, transaction))
             {
                 cmd.Parameters.AddWithValue("@KioskId", kioskId);
                 cmd.Parameters.AddWithValue("@SettlementCode", settlementCode);
                 cmd.Parameters.AddWithValue("@StartDate", startDate.ToString("yyyy-MM-dd HH:mm:ss.fff"));
-                cmd.Parameters.AddWithValue("@ReportGeneratedDate", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+                cmd.Parameters.AddWithValue("@ReportGeneratedDate", ReportGeneratedDate.ToString("yyyy-MM-dd HH:mm:ss.fff"));
                 cmd.Parameters.AddWithValue("@ReportUrl", ReportUrl);
 
                 cmd.ExecuteNonQuery();
             }
+            
+            transaction.Commit();
         }
 
 

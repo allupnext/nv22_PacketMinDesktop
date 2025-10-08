@@ -4,10 +4,12 @@ using Microsoft.Data.Sqlite;
 using Newtonsoft.Json;
 using NV22SpectralInteg.Data;
 using System;
+using System.Diagnostics;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
+using System.Transactions;
 
 namespace NV22SpectralInteg.Services;
 
@@ -90,29 +92,32 @@ public static class ApiService
 
     // In your API/Service class
 
-    public static async Task<bool> SubmitSettlementReportAsync(string settlementCode)
+    public static async Task<(bool Success, string? message, dynamic result)> SubmitSettlementReportAsync(string settlementCode)
     {
         // Assuming these are available from your session/config
-        string apiUrl = $"{BaseUrl}/submit/settlement"; // Endpoint for submission
+        string apiUrl = $"{BaseUrl}/validate/settlement"; // Endpoint for submission
 
         // --- 1. Determine Date Range ---
         // StartTime is the EndDate of the LAST successful report (or DateTime.MinValue for the first run)
         if (string.IsNullOrEmpty(AppSession.KioskId))
         {
             Logger.Log("KioskId is null or empty. Cannot retrieve last report end date.");
-            return false; // Or handle this case appropriately based on your application's logic
+            return (false, "KioskId is null or empty", new { }); // Or handle this case appropriately based on your application's logic
         }
         var data = TransactionRepository.GetLastReportEndDate(AppSession.KioskId);
         DateTime startTime = data.startTime;
 
+        TimeZoneInfo easternZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+        DateTime easternTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, easternZone);
+
         // EndTime is the current moment (inclusive)
-        DateTime endTime = DateTime.Now;
+        DateTime endTime = easternTime;
 
         // If the difference is zero or negative (e.g., clock drift or immediate re-run), exit.
         if (startTime >= endTime)
         {
             Logger.Log($"No new transactions since last report at {startTime}. Skipping submission.");
-            return true;
+            return (false , $"No new transactions since last report at {startTime}.", new { });
         }
 
         // --- 2. Gather Aggregated Data from DB ---
@@ -123,7 +128,7 @@ public static class ApiService
             Logger.Log("No financial transactions found in the specified period. Skipping submission.");
             // Optional: If you skip, you can choose NOT to update the KioskReport table, 
             // ensuring the next run checks the same period until money is deposited.
-            return true;
+            return (false, $"No new transactions since last report at {startTime}.", new { });
         }
         string currentLocalIp = SystemInfo.GetActiveLocalIpAddress();
 
@@ -147,30 +152,43 @@ public static class ApiService
         try
         {
             var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+            var stopwatch = Stopwatch.StartNew();
+
             HttpResponseMessage response = await client.PostAsync(apiUrl, content);
+
+            stopwatch.Stop();
+            Logger.Log($"HTTP request and response took {stopwatch.ElapsedMilliseconds} ms");
+            Logger.Log($"Status code: {(int)response.StatusCode} {response.StatusCode}");
             string responseText = await response.Content.ReadAsStringAsync();
+
             Logger.Log($"📬 API Response: {responseText}");
 
-            if (response.IsSuccessStatusCode)
+            dynamic result = JsonConvert.DeserializeObject<dynamic>(responseText);
+
+            if (result != null && result?.isSucceed == true)
             {
-                var result = JsonConvert.DeserializeObject<dynamic>(responseText);
-                if (result != null && result?.isSucceed == true)
-                {
-                    // --- 5. CRITICAL: Save the successful report marker in the DB ---
-                    TransactionRepository.SaveSettlementReport(AppSession.KioskId, settlementCode, startTime, "");
-                    Logger.Log($"✅ Settlement report successful. Report marker saved in DB.");
-                    return true;
-                }
+                string receiptUrl = result?.data?.RECEIPTURL ?? "";
+
+                TransactionRepository.SaveSettlementReport(
+                    AppSession.KioskId, settlementCode, startTime, endTime, receiptUrl);
+
+                Logger.Log("✅ Settlement report successful. Report marker saved in DB.");
+                return (true, result?.message?.ToString() ?? "Success", result);
             }
 
-            Logger.Log($"❌ Settlement submission failed. Status: {response.StatusCode}. Response: {responseText}");
-            return false;
+            // Log both HTTP status and application-level failure reason
+            Logger.Log($"❌ Settlement submission failed. " +
+                       $"HTTP Status: {(int)response.StatusCode} {response.StatusCode}. " +
+                       $"App Message: {result?.message?.ToString() ?? "Unknown error"}");
+
+            return (false, result?.message?.ToString() ?? "Request failed", new { });
         }
         catch (Exception ex)
         {
-            Logger.LogError("Error submitting settlement report", ex);
-            return false;
+            Logger.LogError("❌ Error submitting settlement report", ex);
+            return (false, "Error submitting settlement report", new { });
         }
+
     }
 
 
@@ -334,14 +352,19 @@ public static class ApiService
 
         try
         {
+
+            TimeZoneInfo easternZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+            DateTime easternTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, easternZone);
+
             // Insert master transaction
             string insertTransaction = @"
-            INSERT INTO Transactions (TransactionId, KioskId, KioskRegId, CustomerRegId, KioskTotalAmount)
-            VALUES (@TransactionId, @KioskId, @KioskRegId, @CustomerRegId, @KioskTotalAmount);";
+            INSERT INTO Transactions (TransactionId, Timestamp, KioskId, KioskRegId, CustomerRegId, KioskTotalAmount)
+            VALUES (@TransactionId, @Timestamp, @KioskId, @KioskRegId, @CustomerRegId, @KioskTotalAmount);";
 
             using (var cmd = new SqliteCommand(insertTransaction, connection, transaction))
             {
                 cmd.Parameters.AddWithValue("@TransactionId", transactionId);
+                cmd.Parameters.AddWithValue("@Timestamp", easternTime);
                 cmd.Parameters.AddWithValue("@KioskId", (string)requestBody.kioskId ?? "");
                 cmd.Parameters.AddWithValue("@KioskRegId", (string)requestBody.kioskRegId ?? "");
                 cmd.Parameters.AddWithValue("@CustomerRegId", (string)requestBody.customerRegId ?? "");

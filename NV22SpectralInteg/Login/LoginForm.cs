@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using BCSKioskServerCrypto;
+using Newtonsoft.Json;
 using NV22SpectralInteg.Classes;
 using NV22SpectralInteg.Dashboard;
 using NV22SpectralInteg.InactivityManager;
@@ -7,6 +8,7 @@ using NV22SpectralInteg.Services;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 using System.Data;
 using System.Drawing;
 using System.Linq;
@@ -536,7 +538,7 @@ namespace NV22SpectralInteg.Login
                 Height = 40,
                 TextAlign = ContentAlignment.MiddleCenter,
                 Margin = new Padding(0, 0, 0, 0),
-            };
+            };   
             stackPanel.Controls.Add(footer);
         }
 
@@ -556,16 +558,65 @@ namespace NV22SpectralInteg.Login
             {
                 Logger.Log($"Attempting to validate settlementCode is : {phoneTextBox.Text} 🔐");
 
-                bool isValidSettlementCode = await ApiService.SubmitSettlementReportAsync(phoneTextBox.Text.Trim());
-                if (isValidSettlementCode) {
-                    Logger.Log("Settlement code is valid. ✅");
+                var processingPopup = new ProcessingPopup();
+                try
+                {
+                    // Show the popup early
+                    processingPopup.Show(this);
+                    await Task.Delay(100); // small delay helps ensure popup renders smoothly
+
+                    var (isValidSettlementCode, message, response) = await ApiService.SubmitSettlementReportAsync(phoneTextBox.Text.Trim());
+
+                    if (isValidSettlementCode)
+                    {
+                        Logger.Log("Settlement code is valid.");
+
+                        if (response?.data?.RECEIPTURL != null)
+                        {
+                            string pdfUrl = response.data.RECEIPTURL;
+
+                            var dummyRequestBean = new LocalRequestBean
+                            {
+                                operation = "pdfprint",
+                                isSucceed = false,
+                            };
+
+                            var printer = new ReceiptPrinter(dummyRequestBean);
+                            printer.PrintPdfFromUrl(pdfUrl);
+
+
+                            processingPopup.Close();
+                            ShowResultAndPrintReceipt(response);
+                            return;
+                        }
+                        else
+                        {
+                            processingPopup.Close();
+                            MessageBox.Show("Receipt URL is missing or response is invalid.", "Data Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        processingPopup.Close();
+                        Logger.Log("Failed to generate settlement receipt! Please try again !!.");
+                        MessageBox.Show(message, "Report failed.", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    processingPopup.Close();
+                    Logger.LogError("🚨 Exception in ValidSettlementCode", ex);
+                    MessageBox.Show("A critical error occurred: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
-                else
+                finally
                 {
-                    Logger.Log("Invalid settlement code entered. ❌");
-                    MessageBox.Show("The settlement code you entered is invalid. Please try again.", "Validation Failed", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;  
+                    if (processingPopup != null && !processingPopup.IsDisposed)
+                    {
+                        processingPopup.Close();
+                    }
                 }
             }
             
@@ -625,6 +676,27 @@ namespace NV22SpectralInteg.Login
                 ResetToLogin();
             }
         }
+
+        private void ShowResultAndPrintReceipt(dynamic result)
+        {
+
+            var successPopup = new SuccessPopup(AppSession.CustomerName, 0, result.isSucceed != null ? (bool)result.isSucceed : true, (string)result.message ?? "ok", "pdf");
+            successPopup.ShowDialog(this);
+
+            // Handle the user's choice from the popup
+            if (result.isSucceed != null ? (bool)result.isSucceed : true)
+            {
+                if (successPopup.DialogResult == DialogResult.OK)
+                {
+                    ResetToLogin();
+                }
+                else   
+                {
+                    Logger.Log("(Kiosk Report) Manual logout initiated by user.");
+                }
+            }
+        }
+
 
         private async void VerifyButton_Click(object? sender, EventArgs e)
         {

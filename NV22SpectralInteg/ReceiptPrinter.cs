@@ -1,8 +1,10 @@
 ﻿using NV22SpectralInteg;
+using PdfiumViewer;
 using QRCoder;
 using System.Drawing; 
 using System.Drawing.Printing;
-using System.IO; 
+using System.IO;
+using System.Net;
 
 namespace BCSKioskServerCrypto
 {
@@ -222,16 +224,17 @@ namespace BCSKioskServerCrypto
         }
         private int CalculateReceiptHeight()
         {
-            int receiptWidth = 280; // Adjusted for 3-inch printer
-            int totalHeight = 15;   // Top padding
+            int receiptWidth = 280; // Paper width in hundredths of an inch (2.8")
+            int totalHeight = 15;   // Initial top padding
 
             using (Bitmap dummyBitmap = new Bitmap(1, 1))
             using (Graphics g = Graphics.FromImage(dummyBitmap))
             {
                 Font font = new Font("Arial", 10);
-                Font boldFont = new Font("Arial", 11, FontStyle.Bold);
+                Font boldFont = new Font("Arial", 10, FontStyle.Bold);
                 int lineHeight = (int)(font.GetHeight(g) + 4);
 
+                // --- HEADER IMAGE ---
                 if (headerImage != null)
                 {
                     int drawWidth = 150;
@@ -239,50 +242,62 @@ namespace BCSKioskServerCrypto
                     totalHeight += drawHeight + lineHeight;
                 }
 
-                // --- Fixed lines (timestamp, kiosk ID, cash, fees)
-                totalHeight += 4 * lineHeight;
+                // --- TIMESTAMP ---
+                totalHeight += lineHeight;
 
-                // --- Store Name ---
+                // --- KIOSK ID ---
+                totalHeight += lineHeight;
+
+                // --- STORE NAME ---
                 string storeName = AppSession.StoreName ?? "N/A";
                 string storeNameLabel = "Store Name: ";
                 float labelWidth = g.MeasureString(storeNameLabel, boldFont).Width;
                 SizeF storeNameSize = g.MeasureString(storeName, font, (int)(receiptWidth - labelWidth - 20));
                 totalHeight += (int)storeNameSize.Height;
 
-                // --- Store Address ---
+                // --- STORE ADDRESS ---
                 string storeAddress = AppSession.StoreAddress ?? "N/A";
                 string storeAddressLabel = "Store Address: ";
                 labelWidth = g.MeasureString(storeAddressLabel, boldFont).Width;
                 SizeF addressSize = g.MeasureString(storeAddress, font, (int)(receiptWidth - labelWidth - 20));
                 totalHeight += (int)addressSize.Height;
 
-                totalHeight += 18; // spacing after address
+                // --- GAP after address ---
+                totalHeight += 18;
 
-                // --- Status / Wallet info ---
-                decimal netAmount = localRequestBean.kioskTotalAmount - localRequestBean.feeAmount;
-                string status = $"✅ Successfully deposited {netAmount:F2} USDT into the wallet ending with 4707.";
-                string statusLabel = "Status: ";
-                labelWidth = g.MeasureString(statusLabel, boldFont).Width;
-                SizeF statusSize = g.MeasureString(status, font, (int)(receiptWidth - labelWidth - 20));
-                totalHeight += (int)statusSize.Height + 10;
+                // --- CASH ENTERED ---
+                totalHeight += lineHeight;
 
-                // --- Conditional section: disclaimer or refund notice ---
-                totalHeight += lineHeight; // title line ("Disclaimer" or "Refund Notice")
+                // --- FEES ---
+                totalHeight += lineHeight;
+
+                // --- STATUS / MESSAGE ---
+                string messageLabel = "Message: ";
+                string messageValue = localRequestBean.printmessage ?? "";
+                labelWidth = g.MeasureString(messageLabel, boldFont).Width;
+                SizeF messageSize = g.MeasureString(messageValue, font, (int)(receiptWidth - labelWidth - 20));
+                totalHeight += (int)messageSize.Height;
+
+                // --- GAP before disclaimer/refund ---
+                totalHeight += 18;
+
+                // --- DISCLAIMER or REFUND NOTICE ---
+                totalHeight += lineHeight; // For "Disclaimer" or "Refund Notice" title
 
                 if (localRequestBean.isSucceed)
                 {
                     string disclaimer = "This receipt confirms that your cash was successfully deposited and converted to USDT. " +
                                         "Please note that the credited balance will only appear in your PocketMint application if all eligibility requirements are met. " +
                                         "If the user is deemed ineligible, the purchase may be voided. In such cases, a refund can be requested at the point of purchase.";
-                    SizeF disclaimerSize = g.MeasureString(disclaimer, font, receiptWidth - 20);
+                    SizeF disclaimerSize = g.MeasureString(disclaimer, font, receiptWidth - 40);
                     totalHeight += (int)disclaimerSize.Height + 10;
                 }
-                //else
-                //{
+                else
+                {
                     string notice = "Your cash was not converted. Please request a refund at the point of purchase. For assistance, contact PocketMint.AI Support.";
-                    SizeF noticeSize = g.MeasureString(notice, font, receiptWidth - 20);
+                    SizeF noticeSize = g.MeasureString(notice, font, receiptWidth - 40);
                     totalHeight += (int)noticeSize.Height + 10;
-                //}
+                }
 
                 // --- Bottom padding ---
                 totalHeight += 3 * lineHeight;
@@ -291,6 +306,34 @@ namespace BCSKioskServerCrypto
             return totalHeight;
         }
 
+
+        public void PrintPdfFromUrl(string pdfUrl)
+        {
+            string tempFilePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".pdf");
+
+            using (HttpClient client = new HttpClient()) 
+            {
+                var response = client.GetAsync(pdfUrl).Result; // Synchronous call to fetch the file
+                response.EnsureSuccessStatusCode(); // Ensure the request was successful
+                File.WriteAllBytes(tempFilePath, response.Content.ReadAsByteArrayAsync().Result); // Save the file
+            }
+
+            using (var document = PdfDocument.Load(tempFilePath))
+            {
+                using (var printDocument = document.CreatePrintDocument())
+                {
+                    printDocument.PrinterSettings = new PrinterSettings()
+                    {
+                        PrinterName = new PrinterSettings().PrinterName // or specify your printer
+                    };
+
+                    printDocument.PrintController = new StandardPrintController(); // suppress print dialog
+                    printDocument.Print();
+                }
+            }
+
+            File.Delete(tempFilePath); // Clean up
+        }
 
 
         private float DrawWrappedText(Graphics graphics, string text, Font font, float x, float y, float maxWidth, float lineSpacing = 5)
