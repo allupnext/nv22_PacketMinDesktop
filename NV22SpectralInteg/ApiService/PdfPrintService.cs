@@ -32,12 +32,12 @@ namespace NV22SpectralInteg.PdfPrintService
                             {
                                 // 4. Show Print Preview Dialog
 
-                                PrintPreviewDialog previewDialog = new PrintPreviewDialog();
-                                previewDialog.Document = printDocument;
-                                previewDialog.PrintPreviewControl.Zoom = 3.0;
+                                //PrintPreviewDialog previewDialog = new PrintPreviewDialog();
+                                //previewDialog.Document = printDocument;
+                                //previewDialog.PrintPreviewControl.Zoom = 3.0;
 
                                 // This dialog handles the printing internally if the user clicks 'Print'.
-                                DialogResult result = previewDialog.ShowDialog();
+                                //DialogResult result = previewDialog.ShowDialog();
 
                                 printDocument.Print();
                             }
