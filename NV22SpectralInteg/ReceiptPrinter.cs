@@ -207,7 +207,7 @@ namespace BCSKioskServerCrypto
                 int receiptHeight = CalculateReceiptHeight();
                 PaperSize paperSize = new PaperSize("CustomReceipt", 280, receiptHeight ); // 2.8" wide
                 printDocument.DefaultPageSettings.PaperSize = paperSize;
-                
+
                 //printPreviewDialog.ShowDialog();
                 printDocument.Print();
                 // SessionManager.status = true; // Not defined in the provided code
@@ -307,35 +307,7 @@ namespace BCSKioskServerCrypto
         }
 
 
-        public void PrintPdfFromUrl(string pdfUrl)
-        {
-            string tempFilePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".pdf");
-
-            using (HttpClient client = new HttpClient()) 
-            {
-                var response = client.GetAsync(pdfUrl).Result; // Synchronous call to fetch the file
-                response.EnsureSuccessStatusCode(); // Ensure the request was successful
-                File.WriteAllBytes(tempFilePath, response.Content.ReadAsByteArrayAsync().Result); // Save the file
-            }
-
-            using (var document = PdfDocument.Load(tempFilePath))
-            {
-                using (var printDocument = document.CreatePrintDocument())
-                {
-                    printDocument.PrinterSettings = new PrinterSettings()
-                    {
-                        PrinterName = new PrinterSettings().PrinterName // or specify your printer
-                    };
-
-                    printDocument.PrintController = new StandardPrintController(); // suppress print dialog
-                    printDocument.Print();
-                }
-            }
-
-            File.Delete(tempFilePath); // Clean up
-        }
-
-
+      
         private float DrawWrappedText(Graphics graphics, string text, Font font, float x, float y, float maxWidth, float lineSpacing = 5)
         {
             RectangleF layoutRect = new RectangleF(x, y, maxWidth, 1000); // Large height to allow wrapping

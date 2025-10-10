@@ -47,18 +47,6 @@ namespace NV22SpectralInteg
 
 
 
-            //var dummyRequestBean = new LocalRequestBean
-            //{
-            //    operation = "bankadd",
-            //    kioskTotalAmount = 100.00m,
-            //    feeAmount = 8.00m,
-            //    isSucceed = true,
-            //    printmessage  = "You purchased $20.0 in crypto. Please check ypur PocketMint wallet linked to mobile ending 7717"
-            //};
-
-            //var printer = new ReceiptPrinter(dummyRequestBean);
-            //printer.printReceipt();
-
             // Launch the login form
             mainLoginForm = new LoginForm();
             Application.Run(mainLoginForm);

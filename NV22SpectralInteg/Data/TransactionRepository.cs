@@ -57,7 +57,7 @@ namespace NV22SpectralInteg.Data
                 // NEW: Create KioskMetadata table to store sync state
                 string createKioskMetadataTable = @"
                 CREATE TABLE IF NOT EXISTS KioskReport (
-                    KioskId TEXT PRIMARY KEY,
+                    KioskId TEXT,
                     SettlementCode TEXT,
                     StartDate DATETIME,
                     ReportGeneratedDate DATETIME,

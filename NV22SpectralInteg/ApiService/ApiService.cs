@@ -152,13 +152,9 @@ public static class ApiService
         try
         {
             var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
-            var stopwatch = Stopwatch.StartNew();
 
             HttpResponseMessage response = await client.PostAsync(apiUrl, content);
 
-            stopwatch.Stop();
-            Logger.Log($"HTTP request and response took {stopwatch.ElapsedMilliseconds} ms");
-            Logger.Log($"Status code: {(int)response.StatusCode} {response.StatusCode}");
             string responseText = await response.Content.ReadAsStringAsync();
 
             Logger.Log($"📬 API Response: {responseText}");
@@ -318,7 +314,6 @@ public static class ApiService
                 amountDetails
             };
 
-            SaveTransactionWithDetails(requestBody);
 
             Logger.Log("📤 Sending transaction request to API via ApiService...");
             string jsonPayload = JsonConvert.SerializeObject(requestBody);
@@ -329,6 +324,11 @@ public static class ApiService
             HttpResponseMessage response = await client.PostAsync(apiUrl, content);
             string responseText = await response.Content.ReadAsStringAsync();
             Logger.Log($"📬 API Response: {responseText}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                SaveTransactionWithDetails(requestBody);
+            }
 
             // Updated the DeserializeObject calls to handle potential null values explicitly
             return JsonConvert.DeserializeObject<dynamic>(responseText) ?? new { isSucceed = false, message = "Deserialization returned null" };

@@ -570,19 +570,15 @@ namespace NV22SpectralInteg.Login
                     if (isValidSettlementCode)
                     {
                         Logger.Log("Settlement code is valid.");
+                        Logger.Log($"✅ Settlement response received. Success: {isValidSettlementCode}, Message: {message}");
+                        Logger.Log($"🔍 Receipt URL: {response?.data?.RECEIPTURL}");
 
                         if (response?.data?.RECEIPTURL != null)
                         {
                             string pdfUrl = response.data.RECEIPTURL;
 
-                            var dummyRequestBean = new LocalRequestBean
-                            {
-                                operation = "pdfprint",
-                                isSucceed = false,
-                            };
-
-                            var printer = new ReceiptPrinter(dummyRequestBean);
-                            printer.PrintPdfFromUrl(pdfUrl);
+                            var printer = new PdfPrintService.PdfPrintService();
+                            await printer.PreviewAndPrintPdfFromUrl(pdfUrl);
 
 
                             processingPopup.Close();
