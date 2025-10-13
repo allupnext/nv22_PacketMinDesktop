@@ -1,11 +1,9 @@
 ﻿using PdfiumViewer;
 using System;
-using System.Collections.Generic;
 using System.Drawing.Printing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Net.Http;
+using System.IO;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace NV22SpectralInteg.PdfPrintService
@@ -16,7 +14,6 @@ namespace NV22SpectralInteg.PdfPrintService
         {
             try
             {
-                // 1. Download the PDF file from the URL
                 using (HttpClient client = new HttpClient())
                 {
                     HttpResponseMessage response = await client.GetAsync(pdfUrl);
@@ -24,22 +21,28 @@ namespace NV22SpectralInteg.PdfPrintService
 
                     using (Stream pdfStream = await response.Content.ReadAsStreamAsync())
                     {
-                        // 2. Load the PDF Document
                         using (var pdfDocument = PdfDocument.Load(pdfStream))
                         {
-                            // 3. Create a Printable Document
                             using (var printDocument = pdfDocument.CreatePrintDocument())
                             {
-                                // 4. Show Print Preview Dialog
+                                // 1. Set HIGH-QUALITY settings (for the physical print job)
+                                printDocument.DefaultPageSettings.PrinterResolution.Kind = PrinterResolutionKind.High;
+                                printDocument.DefaultPageSettings.Margins = new Margins(0, 0, 0, 0);
 
-                                //PrintPreviewDialog previewDialog = new PrintPreviewDialog();
-                                //previewDialog.Document = printDocument;
-                                //previewDialog.PrintPreviewControl.Zoom = 3.0;
-
-                                // This dialog handles the printing internally if the user clicks 'Print'.
-                                //DialogResult result = previewDialog.ShowDialog();
-
+                                // 2. DIRECTLY print the document without showing any dialog.
+                                // The job is sent straight to the default printer's queue.
                                 printDocument.Print();
+
+                                // 2. Create the PrintDialog
+                                //PrintDialog printDialog = new PrintDialog();
+                                //printDialog.Document = printDocument;
+
+                                //// 3. Show the dialog and check the result
+                                //if (printDialog.ShowDialog() == DialogResult.OK)
+                                //{
+                                //    // 4. Print the document using the settings chosen by the user in the dialog
+                                //    printDocument.Print();
+                                //}
                             }
                         }
                     }
@@ -47,12 +50,10 @@ namespace NV22SpectralInteg.PdfPrintService
             }
             catch (HttpRequestException httpEx)
             {
-                // Handles network errors (e.g., URL not found, server error)
-                MessageBox.Show($"Could not download the file.\nCheck the URL or internet connection.\nError: {httpEx.Message}", "Network Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Could not download the file.\nError: {httpEx.Message}", "Network Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             catch (Exception ex)
             {
-                // Handles errors during PDF loading or printing
                 MessageBox.Show($"An error occurred during printing: {ex.Message}", "Processing Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }

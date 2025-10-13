@@ -449,7 +449,7 @@ public static class ApiService
             }
             catch (Exception ex)
             {
-                Logger.MachineLog("🚨 Exception in LogMachineAvailabilityAsync is:\n" + ex);
+                Logger.MachineLog($"🚨 Exception in LogMachineAvailabilityAsync is:\n{ex}");
                 return false;
             }
         }
