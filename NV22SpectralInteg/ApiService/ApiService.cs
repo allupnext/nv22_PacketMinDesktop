@@ -138,8 +138,8 @@ public static class ApiService
             storeRegId = AppSession.KioskRegId,
             kioskId = AppSession.KioskId,
             settlementCode = settlementCode,
-            startTime = startTime.ToString("yyyy-MM-ddTHH:mm:ss.fff"),
-            endTime = endTime.ToString("yyyy-MM-ddTHH:mm:ss.fff"),
+            startTime = startTime.ToString("yyyy-MM-ddTHH:mm:00"),
+            endTime = endTime.ToString("yyyy-MM-ddTHH:mm:00"),
             totalDenominationDepository = aggregatedData.totalDenominationDepository,
             totalSettlementAmount = aggregatedData.totalSettlementAmount,
             kioskIpAddress = currentLocalIp
