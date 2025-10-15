@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Data.Sqlite;
 using Newtonsoft.Json;
 using NV22SpectralInteg.Data;
+using NV22SpectralInteg.Model;
 using System;
 using System.Diagnostics;
 using System.Net.Http;
@@ -38,102 +39,120 @@ public static class ApiService
         Logger.Log($"ApiService initialized in '{Status}' mode.");
     }
 
+    private static async Task<ApiResult<T>> ProcessPostRequest<T>(string apiUrl, object requestBody)
+    {
+        try
+        {
+            string jsonPayload = JsonConvert.SerializeObject(requestBody);
+            Logger.Log($"📦 Payload: {jsonPayload}");
+
+            var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+
+            HttpResponseMessage response = await client.PostAsync(apiUrl, content);
+            string responseText = await response.Content.ReadAsStringAsync();
+            Logger.Log($"📬 API Response: {responseText}");
+
+            if (!response.IsSuccessStatusCode)
+            {
+                return new ApiResult<T>(false, $"HTTP Error: {response.StatusCode} {response.ReasonPhrase}", default);
+            }
+
+            var apiResponse = JsonConvert.DeserializeObject<ApiResponse<T>>(responseText);
+
+            if (apiResponse == null || !apiResponse.isSucceed)
+            {
+                return new ApiResult<T>(false, apiResponse?.message ?? "API call failed with no specific message.", default);
+            }
+
+            return new ApiResult<T>(true, apiResponse.message, apiResponse.data);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError($"Exception during API call to {apiUrl}", ex);
+            return new ApiResult<T>(false, $"Exception: {ex.Message}", default);
+        }
+    }
+
 
     // NOTE: This is a simplified example. In a real app, you would have proper response models
     // instead of 'dynamic' to ensure type safety.
 
     public static async Task<(bool Success, string ErrorMessage)> ValidateAndSetKioskSessionAsync(string kioskId)
     {
-        if (Status == "live")
+        if (Status != "live") return (true, string.Empty);
+
+        string apiUrl = $"{BaseUrl}/get/kiosks/details";
+
+        // 1. Prepare Request
+        var requestBody = new KioskSessionRequest { KioskId = kioskId };
+
+        // 2. Process API Call using helper
+        var result = await ProcessPostRequest<KioskSessionData>(apiUrl, requestBody);
+
+        if (!result.Success)
         {
-            string apiUrl = $"{BaseUrl}/get/kiosks/details";
-            try
-            {
-                var requestBody = new { kioskId = int.Parse(kioskId) };
-                string jsonPayload = JsonConvert.SerializeObject(requestBody);
-                Logger.Log($"📦 Payload: {jsonPayload}");
-
-                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
-
-                HttpResponseMessage response = await client.PostAsync(apiUrl, content);
-                string responseText = await response.Content.ReadAsStringAsync();
-                Logger.Log($"📬 API Response: {responseText}");
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    return (false, $"API Error: {response.StatusCode}");
-                }
-
-                var result = JsonConvert.DeserializeObject<dynamic>(responseText);
-                if (result == null || result?.isSucceed != true || result?.data == null)
-                {
-                    return (false, "Invalid Kiosk ID or API response.");
-                }
-
-                AppSession.KioskId = result?.data.KIOSKID;
-                AppSession.KioskRegId = result?.data.REGID;
-                AppSession.StoreName = result?.data.KIOSKNAME;
-                AppSession.StoreAddress = $"{result?.data.ADDRESS}, {result?.data.CITY}, {result?.data.LOCATION}, {result?.data.ZIPCODE}";
-
-                return (true, string.Empty); // Updated to return a non-null string
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError("Error validating Kiosk ID", ex);
-                return (false, $"Exception: {ex.Message}");
-            }
+            return (false, result.ErrorMessage);
         }
-        else
+
+        // 3. Map Data to Session
+        var data = result.Data;
+        if (data == null)
         {
-            return (true, string.Empty); // Updated to return a non-null string
+            return (false, "Invalid Kiosk ID or API response data was null.");
         }
+
+        AppSession.KioskId = data.KIOSKID;
+        AppSession.KioskRegId = data.REGID;
+        AppSession.StoreName = data.KIOSKNAME;
+        AppSession.StoreAddress = $"{data.ADDRESS}, {data.CITY}, {data.LOCATION}, {data.ZIPCODE}";
+
+        return (true, string.Empty);
     }
-
 
     // In your API/Service class
 
-    public static async Task<(bool Success, string? message, dynamic result)> SubmitSettlementReportAsync(string settlementCode)
+    public static async Task<ApiResult<SettlementReportData>> SubmitSettlementReportAsync(string settlementCode)
     {
-        // Assuming these are available from your session/config
-        string apiUrl = $"{BaseUrl}/validate/settlement"; // Endpoint for submission
+        string apiUrl = $"{BaseUrl}/validate/settlement";
 
         // --- 1. Determine Date Range ---
-        // StartTime is the EndDate of the LAST successful report (or DateTime.MinValue for the first run)
         if (string.IsNullOrEmpty(AppSession.KioskId))
         {
             Logger.Log("KioskId is null or empty. Cannot retrieve last report end date.");
-            return (false, "KioskId is null or empty", new { }); // Or handle this case appropriately based on your application's logic
+            return new ApiResult<SettlementReportData>(false, "KioskId is null or empty", default);
         }
+
+        // NOTE: Assuming TransactionRepository.GetLastReportEndDate now returns a structure 
+        // where startTime can be accessed. (e.g., a tuple or a custom object)
         var data = TransactionRepository.GetLastReportEndDate(AppSession.KioskId);
         DateTime startTime = data.startTime;
 
         TimeZoneInfo easternZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
         DateTime easternTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, easternZone);
-
-        // EndTime is the current moment (inclusive)
         DateTime endTime = easternTime;
 
-        // If the difference is zero or negative (e.g., clock drift or immediate re-run), exit.
         if (startTime >= endTime)
         {
             Logger.Log($"No new transactions since last report at {startTime}. Skipping submission.");
-            return (false , $"No new transactions since last report at {startTime}.", new { });
+            return new ApiResult<SettlementReportData>(false, $"No new transactions since last report at {startTime}.", default);
         }
-
+                
         // --- 2. Gather Aggregated Data from DB ---
-        dynamic aggregatedData = TransactionRepository.GetAggregatedSettlementData(AppSession.KioskId, startTime, endTime);
+        // NOTE: Cast the result from dynamic to the specific DTO you use for aggregation
+        // This assumes TransactionRepository.GetAggregatedSettlementData returns a type 
+        // that can be cast to AggregatedSettlementData (or you update the repo to return it directly)
+        AggregatedSettlementData aggregatedData = TransactionRepository.GetAggregatedSettlementData(AppSession.KioskId, startTime, endTime);
 
         if (aggregatedData.totalSettlementAmount <= 0)
         {
             Logger.Log("No financial transactions found in the specified period. Skipping submission.");
-            // Optional: If you skip, you can choose NOT to update the KioskReport table, 
-            // ensuring the next run checks the same period until money is deposited.
-            return (false, $"No new transactions since last report at {startTime}.", new { });
+            return new ApiResult<SettlementReportData>(false, $"No new transactions since last report at {startTime}.", default);
         }
+
         string currentLocalIp = SystemInfo.GetActiveLocalIpAddress();
 
-        // --- 3. Construct API Payload ---
-        var requestBody = new
+        // --- 3. Construct API Payload using the type-safe DTO ---
+        var requestBody = new SettlementReportRequest
         {
             storeRegId = AppSession.KioskRegId,
             kioskId = AppSession.KioskId,
@@ -145,203 +164,207 @@ public static class ApiService
             kioskIpAddress = currentLocalIp
         };
 
-        string jsonPayload = JsonConvert.SerializeObject(requestBody, Formatting.Indented);
-        Logger.Log($"📦 Settlement Payload: {jsonPayload}");
+        // --- 4. Send API Request using generic helper ---
+        var apiResult = await ProcessPostRequest<SettlementReportData>(apiUrl, requestBody);
 
-        // --- 4. Send API Request ---
-        try
+        if (apiResult.Success)
         {
-            var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+            // Data is already deserialized and checked for success
+            string receiptUrl = apiResult.Data?.RECEIPTURL ?? "";
 
-            HttpResponseMessage response = await client.PostAsync(apiUrl, content);
+            TransactionRepository.SaveSettlementReport(
+                AppSession.KioskId, settlementCode, startTime, endTime, receiptUrl);
 
-            string responseText = await response.Content.ReadAsStringAsync();
-
-            Logger.Log($"📬 API Response: {responseText}");
-
-            dynamic result = JsonConvert.DeserializeObject<dynamic>(responseText);
-
-            if (result != null && result?.isSucceed == true)
-            {
-                string receiptUrl = result?.data?.RECEIPTURL ?? "";
-
-                TransactionRepository.SaveSettlementReport(
-                    AppSession.KioskId, settlementCode, startTime, endTime, receiptUrl);
-
-                Logger.Log("✅ Settlement report successful. Report marker saved in DB.");
-                return (true, result?.message?.ToString() ?? "Success", result);
-            }
-
-            // Log both HTTP status and application-level failure reason
-            Logger.Log($"❌ Settlement submission failed. " +
-                       $"HTTP Status: {(int)response.StatusCode} {response.StatusCode}. " +
-                       $"App Message: {result?.message?.ToString() ?? "Unknown error"}");
-
-            return (false, result?.message?.ToString() ?? "Request failed", new { });
+            Logger.Log("✅ Settlement report successful. Report marker saved in DB.");
         }
-        catch (Exception ex)
+        else
         {
-            Logger.LogError("❌ Error submitting settlement report", ex);
-            return (false, "Error submitting settlement report", new { });
+            Logger.Log($"❌ Settlement submission failed. App Message: {apiResult.ErrorMessage}");
         }
 
+        // Return the clean ApiResult object
+        return apiResult;
     }
-
 
     public static async Task<bool> SendOtpAsync(string mobileNo)
     {
-        // For demonstration, returning true. Uncomment your real logic here.
-        if (Status == "live")
-        {
-
-            string apiUrl = $"{BaseUrl}/send/user/mobileno/otp";
-            try
-            {
-                if (string.IsNullOrEmpty(AppSession.KioskId))
-                {
-                    Logger.Log("KioskId is null or empty. Cannot retrieve last report end date.");
-                    return false; // Or handle this case appropriately based on your application's logic
-                }
-                var payload = new { mobileNo, kioskId = int.Parse(AppSession.KioskId) };
-                string jsonPayload = JsonConvert.SerializeObject(payload);
-                Logger.Log($"📦 Payload: {jsonPayload}");
-
-                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
-
-                HttpResponseMessage response = await client.PostAsync(apiUrl, content);
-                string responseText = await response.Content.ReadAsStringAsync();
-                Logger.Log($"📬 API Response: {responseText}");
-
-                var result = JsonConvert.DeserializeObject<dynamic>(responseText);
-                if (result != null && result?.isSucceed == true)
-                {
-                    AppSession.smsId = result?.smsId;
-                    return true;
-                }
-                return false;
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError("Exception in SendOtpAsync", ex);
-                return false;
-            }
-        }
-        else
+        // For demonstration, keep non-live path simple
+        if (Status != "live")
         {
             return true;
         }
+
+        string apiUrl = $"{BaseUrl}/send/user/mobileno/otp";
+
+        if (string.IsNullOrEmpty(AppSession.KioskId))
+        {
+            Logger.Log("KioskId is null or empty. Cannot send OTP.");
+            return false;
+        }
+
+        try
+        {
+            // 1. Use the type-safe Request DTO (OtpSendRequest)
+            var requestBody = new OtpSendRequest
+            {
+                mobileNo = mobileNo,
+                kioskId = AppSession.KioskId
+            };
+
+            // 2. Process API Call using generic helper
+            // Expected Data Type T is OtpSendResponseData
+            var result = await ProcessPostRequest<OtpSendResponseData>(apiUrl, requestBody);
+
+            if (!result.Success)
+            {
+                // Log the error message from the result object
+                Logger.Log($"❌ SendOtp failed: {result.ErrorMessage}");
+                return false;
+            }
+
+            // 3. Map type-safe Data to Session
+            // result.Data is of type OtpSendResponseData
+            AppSession.smsId = result.Data?.smsId;
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError("Exception in SendOtpAsync", ex);
+            return false;
+        }
     }
+
+    // Ensure you have 'using NV22SpectralInteg.Models;' at the top of ApiService.cs
 
     public static async Task<bool> VerifyOtpAsync(string mobileNo, string otp)
     {
-        // For demonstration, returning true. Uncomment your real logic here.
-
-        if (Status == "live")
-        {
-            string apiUrl = $"{BaseUrl}/validate/user/mobileno/otp";
-            try
-            {
-                if (string.IsNullOrEmpty(AppSession.KioskId))
-                {
-                    Logger.Log("KioskId is null or empty. Cannot retrieve last report end date.");
-                    return false; // Or handle this case appropriately based on your application's logic
-                }
-                var payload = new
-                {
-                    mobileNo,
-                    kioskId = int.Parse(AppSession.KioskId),
-                    otp,
-                    smsId = AppSession.smsId
-                };
-                string jsonPayload = JsonConvert.SerializeObject(payload);
-                Logger.Log($"📦 Payload: {jsonPayload}");
-
-                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
-
-                HttpResponseMessage response = await client.PostAsync(apiUrl, content);
-                string responseText = await response.Content.ReadAsStringAsync();
-                Logger.Log($"📬 API Response: {responseText}");
-
-                var result = JsonConvert.DeserializeObject<dynamic>(responseText);
-                if (result != null && result?.isSucceed == true && result?.data != null)
-                {
-                    AppSession.CustomerRegId = result?.data.REGID;
-                    AppSession.CustomerName = result?.data.NAME;
-                    AppSession.CustomerBALANCE = result?.data.BALANCE;
-                    return true;
-                }
-                return false;
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError("Exception in VerifyOtpAsync", ex);
-                return false;
-            }
-        }
-        else
+        // For demonstration, keep non-live path simple
+        if (Status != "live")
         {
             return true;
         }
+
+        string apiUrl = $"{BaseUrl}/validate/user/mobileno/otp";
+
+        if (string.IsNullOrEmpty(AppSession.KioskId))
+        {
+            Logger.Log("KioskId is null or empty. Cannot verify OTP.");
+            return false;
+        }
+
+        try
+        {
+            // 1. Use the type-safe Request DTO (OtpVerifyRequest)
+            var requestBody = new OtpVerifyRequest
+            {
+                mobileNo = mobileNo,
+                kioskId = AppSession.KioskId,
+                otp = otp,
+                smsId = AppSession.smsId
+            };
+
+            // 2. Process API Call using generic helper
+            // Expected Data Type T is OtpVerifyData
+            var result = await ProcessPostRequest<OtpVerifyData>(apiUrl, requestBody);
+
+            if (!result.Success)
+            {
+                // Log the error message from the result object
+                Logger.Log($"❌ VerifyOtp failed: {result.ErrorMessage}");
+                return false;
+            }
+
+            // 3. Map type-safe Data to Session
+            // result.Data is of type OtpVerifyData
+            var data = result.Data;
+
+            // Ensure data is not null (though the helper typically covers this)
+            if (data == null)
+            {
+                Logger.Log("VerifyOtp succeeded but returned null data.");
+                return false;
+            }
+
+            AppSession.CustomerRegId = data.REGID;
+            AppSession.CustomerName = data.NAME;
+            AppSession.CustomerBALANCE = data.BALANCE;
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError("Exception in VerifyOtpAsync", ex);
+            return false;
+        }
     }
 
-    public static async Task<dynamic> PersistTransactionAsync(IReadOnlyDictionary<string, int> noteCounts)
+    public static async Task<ApiResult<TransactionPersistData>> PersistTransactionAsync(IReadOnlyDictionary<string, int> noteCounts)
     {
-
         string apiUrl = $"{BaseUrl}/user/transaction/persist";
 
         try
         {
+            // --- 1. Map input to type-safe DTOs ---
             var amountDetails = noteCounts
                 .Select(kvp =>
                 {
-                    string key = kvp.Key;
-                    int count = kvp.Value;
-                    // This logic correctly extracts the denomination number from strings like "100 INR"
-                    var denominationMatch = System.Text.RegularExpressions.Regex.Match(key, @"\d+");
+                    // This original logic for parsing denomination remains
+                    var denominationMatch = System.Text.RegularExpressions.Regex.Match(kvp.Key, @"\d+");
                     int denomination = denominationMatch.Success && int.TryParse(denominationMatch.Value, out var d) ? d : 0;
-                    return new { denomination, count, total = denomination * count };
+
+                    return new DenominationDetail
+                    {
+                        denomination = denomination,
+                        count = kvp.Value,
+                        total = denomination * kvp.Value
+                    };
                 })
                 .ToList();
 
             decimal kioskTotalAmount = amountDetails.Sum(a => a.total);
 
-            var requestBody = new
+            // 2. Construct type-safe Request Body
+            var requestBody = new TransactionPersistRequest
             {
                 kioskId = AppSession.KioskId,
                 kioskRegId = AppSession.KioskRegId,
                 customerRegId = AppSession.CustomerRegId,
-                kioskTotalAmount, 
-                amountDetails
+                kioskTotalAmount = kioskTotalAmount,
+                amountDetails = amountDetails
             };
 
-
             Logger.Log("📤 Sending transaction request to API via ApiService...");
-            string jsonPayload = JsonConvert.SerializeObject(requestBody);
-            Logger.Log($"📦 Payload: {jsonPayload}");
 
-            var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+            // --- 3. Send API Request using generic helper ---
+            // Expected Data Type T is TransactionPersistData
+            var apiResult = await ProcessPostRequest<TransactionPersistData>(apiUrl, requestBody);
 
-            HttpResponseMessage response = await client.PostAsync(apiUrl, content);
-            string responseText = await response.Content.ReadAsStringAsync();
-            Logger.Log($"📬 API Response: {responseText}");
-
-            if (response.IsSuccessStatusCode)
+            // --- 4. Process Local DB Save ---
+            if (apiResult.Success)
             {
+                // IMPORTANT: SaveTransactionWithDetails must be updated to accept a type-safe DTO 
+                // (TransactionPersistRequest) instead of 'dynamic' to maintain type-safety 
+                // throughout your application.
                 SaveTransactionWithDetails(requestBody);
+                Logger.Log("✅ Transaction persisted successfully, saving locally.");
+            }
+            else
+            {
+                Logger.Log($"❌ Transaction persistence failed. App Message: {apiResult.ErrorMessage}");
             }
 
-            // Updated the DeserializeObject calls to handle potential null values explicitly
-            return JsonConvert.DeserializeObject<dynamic>(responseText) ?? new { isSucceed = false, message = "Deserialization returned null" };
+            return apiResult;
         }
         catch (Exception ex)
         {
             Logger.LogError("🚨 Exception in PersistTransactionAsync", ex);
-            // Return a failed response object so the UI can handle it gracefully
-            return JsonConvert.DeserializeObject<dynamic>($"{{ 'isSucceed': false, 'message': 'Error: {ex.Message}' }}") ?? new { isSucceed = false, message = "Deserialization returned null" };
+            // Return a failed result object gracefully
+            return new ApiResult<TransactionPersistData>(false, $"Error: {ex.Message}", default);
         }
     }
 
-    public static void SaveTransactionWithDetails(dynamic requestBody)
+    public static void SaveTransactionWithDetails(TransactionPersistRequest requestBody)
     {
         string transactionId = Guid.NewGuid().ToString();
 
@@ -352,39 +375,39 @@ public static class ApiService
 
         try
         {
-
             TimeZoneInfo easternZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
             DateTime easternTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, easternZone);
 
             // Insert master transaction
             string insertTransaction = @"
-            INSERT INTO Transactions (TransactionId, Timestamp, KioskId, KioskRegId, CustomerRegId, KioskTotalAmount)
-            VALUES (@TransactionId, @Timestamp, @KioskId, @KioskRegId, @CustomerRegId, @KioskTotalAmount);";
+        INSERT INTO Transactions (TransactionId, Timestamp, KioskId, KioskRegId, CustomerRegId, KioskTotalAmount)
+        VALUES (@TransactionId, @Timestamp, @KioskId, @KioskRegId, @CustomerRegId, @KioskTotalAmount);";
 
             using (var cmd = new SqliteCommand(insertTransaction, connection, transaction))
             {
                 cmd.Parameters.AddWithValue("@TransactionId", transactionId);
                 cmd.Parameters.AddWithValue("@Timestamp", easternTime);
-                cmd.Parameters.AddWithValue("@KioskId", (string)requestBody.kioskId ?? "");
-                cmd.Parameters.AddWithValue("@KioskRegId", (string)requestBody.kioskRegId ?? "");
-                cmd.Parameters.AddWithValue("@CustomerRegId", (string)requestBody.customerRegId ?? "");
-                cmd.Parameters.AddWithValue("@KioskTotalAmount", (decimal)requestBody.kioskTotalAmount);
+                // Access properties via the type-safe object:
+                cmd.Parameters.AddWithValue("@KioskId", requestBody.kioskId ?? "");
+                cmd.Parameters.AddWithValue("@KioskRegId", requestBody.kioskRegId ?? "");
+                cmd.Parameters.AddWithValue("@CustomerRegId", requestBody.customerRegId ?? "");
+                cmd.Parameters.AddWithValue("@KioskTotalAmount", requestBody.kioskTotalAmount);
 
                 cmd.ExecuteNonQuery();
             }
 
             // Insert each detail row
             string insertDetail = @"
-            INSERT INTO TransactionDetails (TransactionId, Denomination, Count, Total)
-            VALUES (@TransactionId, @Denomination, @Count, @Total);";
+        INSERT INTO TransactionDetails (TransactionId, Denomination, Count, Total)
+        VALUES (@TransactionId, @Denomination, @Count, @Total);";
 
-            foreach (var detail in requestBody.amountDetails)
+            foreach (var detail in requestBody.amountDetails) // 'amountDetails' is now List<DenominationDetail>
             {
                 using var cmd = new SqliteCommand(insertDetail, connection, transaction);
                 cmd.Parameters.AddWithValue("@TransactionId", transactionId);
-                cmd.Parameters.AddWithValue("@Denomination", (int)detail.denomination);
-                cmd.Parameters.AddWithValue("@Count", (int)detail.count);
-                cmd.Parameters.AddWithValue("@Total", (decimal)detail.total);
+                cmd.Parameters.AddWithValue("@Denomination", detail.denomination); // No cast needed
+                cmd.Parameters.AddWithValue("@Count", detail.count);             // No cast needed
+                cmd.Parameters.AddWithValue("@Total", detail.total);             // No cast needed
 
                 cmd.ExecuteNonQuery();
             }
@@ -405,57 +428,49 @@ public static class ApiService
 
     public static async Task<bool> LogMachineAvailabilityAsync()
     {
-        if (Status == "live")
-        {
-            string apiUrl = $"{BaseUrl}/machine/availability/log";
-            try
-            {
-                string currentLocalIp = SystemInfo.GetActiveLocalIpAddress();
-
-                if (currentLocalIp == "Not Found" || currentLocalIp == "Error")
-                {
-                    Logger.MachineLog($"🚨 Skipping availability log: Could not determine local IP address (Result: {currentLocalIp}).");
-                    return false;
-                }
-
-                var requestBody = new
-                {
-                    kioskId = AppSession.KioskId,
-                    ipAddress = currentLocalIp
-                };
-
-                string jsonPayload = JsonConvert.SerializeObject(requestBody);
-                Logger.MachineLog($"📦 Payload: {jsonPayload}");
-                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
-                HttpResponseMessage response = await client.PostAsync(apiUrl, content);
-                string responseText = await response.Content.ReadAsStringAsync();
-                Logger.MachineLog($"📬 API Response: {responseText}");
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    Logger.MachineLog($"🚨 API Error while logging availability: {response.StatusCode}");
-                    return false;
-                }
-
-                var result = JsonConvert.DeserializeObject<dynamic>(responseText);
-                if (result == null || result?.isSucceed != true)
-                {
-                    Logger.MachineLog("🚨 Failed to log machine availability: Invalid API response.");
-                    return false;
-                }
-
-                Logger.MachineLog("✅ Machine availability logged successfully.");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Logger.MachineLog($"🚨 Exception in LogMachineAvailabilityAsync is:\n{ex}");
-                return false;
-            }
-        }
-        else
+        if (Status != "live")
         {
             return true;
+        }
+
+        string apiUrl = $"{BaseUrl}/machine/availability/log";
+
+        try
+        {
+            string currentLocalIp = SystemInfo.GetActiveLocalIpAddress();
+
+            if (currentLocalIp == "Not Found" || currentLocalIp == "Error")
+            {
+                Logger.MachineLog($"🚨 Skipping availability log: Could not determine local IP address (Result: {currentLocalIp}).");
+                return false;
+            }
+
+            // 1. Use the type-safe Request DTO (AvailabilityRequest)
+            var requestBody = new AvailabilityRequest
+            {
+                kioskId = AppSession.KioskId,
+                ipAddress = currentLocalIp
+            };
+
+            // 2. Process API Call using generic helper
+            // Expected Data Type T is AvailabilityResponseData (or an empty type if the 'data' is always null/empty)
+            var result = await ProcessPostRequest<AvailabilityResponseData>(apiUrl, requestBody);
+
+            if (!result.Success)
+            {
+                // Log the detailed error message from the helper/API response
+                Logger.MachineLog($"🚨 Failed to log machine availability: {result.ErrorMessage}");
+                return false;
+            }
+
+            Logger.MachineLog("✅ Machine availability logged successfully.");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            // Catch exceptions not handled by ProcessPostRequest (e.g., network issues)
+            Logger.MachineLog($"🚨 Exception in LogMachineAvailabilityAsync is:\n{ex}");
+            return false;
         }
     }
 }

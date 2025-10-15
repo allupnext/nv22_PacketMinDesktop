@@ -3,6 +3,7 @@ using Newtonsoft.Json;
 using NV22SpectralInteg.Classes;
 using NV22SpectralInteg.InactivityManager;
 using NV22SpectralInteg.Login;
+using NV22SpectralInteg.Model;
 using NV22SpectralInteg.Services;
 using System.Data;
 using System.Management;
@@ -30,6 +31,7 @@ namespace NV22SpectralInteg.Dashboard
         private ComboBox comboBoxComPorts = new ComboBox();
         private PictureBox titleImage;
 
+        private Panel headerPanel;
         private Panel contentPanel;
         private Label addAmountLabel;
         private Panel tableWrapper;
@@ -40,6 +42,7 @@ namespace NV22SpectralInteg.Dashboard
 
         private readonly CValidator _validator;
         private readonly AppConfig config;
+
 
         public Dashboard(CValidator validator, AppConfig config)
         {
@@ -54,6 +57,26 @@ namespace NV22SpectralInteg.Dashboard
             timer1.Interval = pollTimer;
             reconnectionTimer.Tick += new EventHandler(reconnectionTimer_Tick);
             
+            this.Resize += new EventHandler(Dashboard_Resize);
+        }
+
+        private void Dashboard_Resize(object sender, EventArgs e)
+        {
+            if (this.WindowState == FormWindowState.Minimized)
+            {
+                return;
+            }
+
+            var hasData = IsApiEnabled ? _validator?.NoteEscrowCounts.Any() ?? false : testCounts.Any();
+
+            // Always center the main panels on resize
+            CenterPanels();
+
+            // Only center the internal content if it's currently visible
+            if (hasData)
+            {
+                CenterContentPanelLayout();
+            }
         }
 
         private void reconnectionTimer_Tick(object sender, EventArgs e)
@@ -79,12 +102,14 @@ namespace NV22SpectralInteg.Dashboard
             this.BackColor = ColorTranslator.FromHtml("#11150f");
             this.WindowState = FormWindowState.Maximized;
             this.FormBorderStyle = FormBorderStyle.None;
+            this.StartPosition = FormStartPosition.CenterScreen;
 
-            Panel headerPanel = new Panel
+            headerPanel = new Panel
             {
-                Dock = DockStyle.Top,
+                Size = new Size(1000, 500), 
+                Anchor = AnchorStyles.None,
                 BackColor = Color.Transparent,
-                AutoSize = true,
+                AutoSize = false,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 Padding = new Padding(0)
             };
@@ -193,7 +218,8 @@ namespace NV22SpectralInteg.Dashboard
 
             contentPanel = new Panel
             {
-                Dock = DockStyle.Fill,
+                Size = new Size(800, 500),
+                Anchor = AnchorStyles.None,
                 BackColor = this.BackColor,
                 Padding = new Padding(0, 20, 0, 0)
             };
@@ -242,12 +268,27 @@ namespace NV22SpectralInteg.Dashboard
             {
                 confirmButton.ForeColor = Color.White;
             };
-            contentPanel.Controls.Add(confirmButton);
 
             tableWrapper = new Panel { Dock = DockStyle.None, Visible = false };
             contentPanel.Controls.Add(tableWrapper);
+
+
+
+            CenterPanels();
         }
 
+        private void CenterPanels()
+        {
+            headerPanel.Location = new Point(
+                (this.ClientSize.Width - headerPanel.Width) / 2,
+                20 // Some top margin
+            );
+
+            contentPanel.Location = new Point(
+                (this.ClientSize.Width - contentPanel.Width) / 2,
+                headerPanel.Bottom + 20 // Some spacing between header and content
+            );
+        }
 
         // In Dashboard.cs, add this new method anywhere inside the class
         //private async Task<(dynamic result, decimal totalAmount)> PerformTransactionInBackgroundAsync()
@@ -359,23 +400,36 @@ namespace NV22SpectralInteg.Dashboard
                 // The UI thread remains responsive and the GIF animates smoothly.
                 var result = await Task.Run(async () =>
                 {
-                    // Call the new, centralized method in ApiService
-                    var apiResult = await ApiService.PersistTransactionAsync(_validator.NoteEscrowCounts);
+                    // Perform printing in the background after the API call
+                    ApiResult<TransactionPersistData> apiResult = await ApiService.PersistTransactionAsync(_validator.NoteEscrowCounts);
 
                     // Perform printing in the background after the API call
-                    if (apiResult != null && (bool)apiResult.isSucceed)
+                    // 1. Check for success directly on the ApiResult object
+                    if (apiResult.Success)
                     {
+                        // The data object is now strongly typed
+                        var data = apiResult.Data;
+
                         var receiptData = new LocalRequestBean
                         {
                             operation = "bankadd",
                             kioskTotalAmount = currentGrandTotal, // Use the total from the dashboard
-                            isSucceed = (bool)apiResult.isSucceed,
-                            printmessage = (string)apiResult.message,
-                            feeAmount = (apiResult.data?.cryptoConversionFee != null) ? (decimal)apiResult.data.cryptoConversionFee : 0.00m
+                            isSucceed = apiResult.Success,
+
+                            // 2. Access message from the ApiResult object
+                            printmessage = apiResult.ErrorMessage,
+
+                            // 3. Access data properties safely and cast them (using a null check for safety)
+                            // NOTE: We assume 'cryptoConversionFee' is a property on TransactionPersistData.
+                            // You MUST update TransactionPersistData to include this property.
+                            feeAmount = (data?.cryptoConversionFee != null) ? data.cryptoConversionFee : 0.00m
                         };
+
                         var printer = new ReceiptPrinter(receiptData);
                         printer.printReceipt();
                     }
+
+                    // Ensure the caller of this code also knows to handle ApiResult<T>
                     return apiResult;
                 });
 
@@ -556,6 +610,9 @@ namespace NV22SpectralInteg.Dashboard
             int maxVisibleRows = isHorizontal ? 3 : 8; // 1 header + 2 or 7 data rows
             int rowHeight = 48; // approx height per row including padding/borders
 
+            int maxTableHeight = maxVisibleRows * rowHeight;
+            int tableContentHeight = notesTable.PreferredSize.Height;
+
             var scrollablePanel = new Panel
             {
                 Width = 800,
@@ -571,7 +628,7 @@ namespace NV22SpectralInteg.Dashboard
             var wrapper = new Panel
             {
                 Width = 800,
-                Height = scrollablePanel.Height + grandTotalTable.PreferredSize.Height, // add some spacing
+                Height = scrollablePanel.Height + grandTotalTable.PreferredSize.Height,
                 BackColor = Color.Transparent,
                 Dock = DockStyle.None
             };
@@ -643,77 +700,88 @@ namespace NV22SpectralInteg.Dashboard
             contentPanel.Controls.Add(tableWrapper);
 
             ToggleDataView();
+
+            CenterContentPanelLayout();
         }
 
         private void ToggleDataView()
         {
             var hasData = IsApiEnabled ? _validator?.NoteEscrowCounts.Any() ?? false : testCounts.Any();
-            //var hasData = testCounts.Any();
 
-            // This part is the same, it ensures the correct controls are set to visible/invisible.
-            addAmountLabel.Visible = !hasData;
-            tableWrapper.Visible = hasData;
+            // Clear all controls from the content panel first
+            contentPanel.Controls.Clear();
+
+            // Set button visibility based on whether we have data
             confirmButton.Visible = hasData;
 
-            // This is the new, corrected logic.
             if (hasData)
             {
-                // This is your existing code for when there IS data.
-                FlowLayoutPanel centerPanel = new FlowLayoutPanel
+                // 1. Create a new layout panel to hold the content centered vertically and horizontally.
+                // We set its size to match contentPanel's size for the centering calculation to work correctly.
+                var containerLayout = new FlowLayoutPanel
                 {
-                    Dock = DockStyle.Fill,
+                    // CRITICAL FIX: Change DockStyle.Fill to DockStyle.None so CenterContentPanelLayout can set the Location.
+                    Dock = DockStyle.None,
                     FlowDirection = FlowDirection.TopDown,
+                    WrapContents = false,
                     AutoSize = true,
                     AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                    WrapContents = false,
-                    BackColor = Color.Transparent
+                    BackColor = Color.Transparent,
+                    Padding = new Padding(20)
                 };
 
-                centerPanel.Anchor = AnchorStyles.None;
-                contentPanel.Controls.Clear(); // Clear the "Please Add..." label
-
-                centerPanel.Controls.Add(tableWrapper);
-
+                // 2. The button wrapper width should match the overall wrapper created in CreateNotesTable
                 Panel buttonWrapper = new Panel
                 {
+                    // CRITICAL FIX: Use the wrapper's final width, not the arbitrary 800px width.
                     Width = tableWrapper.Width,
                     Height = confirmButton.Height,
                     BackColor = Color.Transparent,
                     Margin = new Padding(0, 30, 0, 0)
                 };
-
-                confirmButton.Anchor = AnchorStyles.None;
+                // 3. Center the confirm button inside its wrapper
+                confirmButton.Anchor = AnchorStyles.None; // Reset anchors
                 confirmButton.Left = (buttonWrapper.Width - confirmButton.Width) / 2;
-                confirmButton.Top = (buttonWrapper.Height - confirmButton.Height) / 2;
+                confirmButton.Top = 0; // Top of the wrapper
                 buttonWrapper.Controls.Add(confirmButton);
 
-                centerPanel.Controls.Add(buttonWrapper);
+                // 4. Add the controls in flow order
+                containerLayout.Controls.Add(tableWrapper);
+                containerLayout.Controls.Add(buttonWrapper);
 
-                contentPanel.Controls.Add(centerPanel); // Add the new panel with the table
-
-                // Centering logic
-
-                int topMargin = 10;
-                centerPanel.Location = new Point(
-                    (contentPanel.Width - centerPanel.Width) / 2,
-                    topMargin
-                );
-                contentPanel.Resize += (s, e) =>
-                {
-                    centerPanel.Location = new Point(
-                        (contentPanel.Width - centerPanel.Width) / 2,
-                        topMargin
-                    );
-                };
+                // 5. Add the main content container to the content panel
+                contentPanel.Controls.Add(containerLayout);
             }
             else
             {
-                contentPanel.Controls.Clear();
+                // No data: just show the "Please Add..." label, filling the space
                 contentPanel.Controls.Add(addAmountLabel);
+                addAmountLabel.Dock = DockStyle.Fill;
             }
         }
 
+        private void CenterContentPanelLayout()
+        {
+            // Find the dynamically created FlowLayoutPanel inside the contentPanel
+            // We are looking for the container that holds the table and button
+            var containerLayout = contentPanel.Controls.OfType<FlowLayoutPanel>().FirstOrDefault();
 
+            if (containerLayout == null) return;
+
+            // Use containerLayout instead of centerPanel in the following lines
+            containerLayout.Update();
+
+            // 1. Calculate horizontal center within contentPanel (800px wide)
+            int x = (contentPanel.Width - containerLayout.Width) / 2;
+
+            // 2. Calculate vertical center within contentPanel, allowing a minimum top margin
+            int y = Math.Max(10, (contentPanel.Height - containerLayout.Height) / 2);
+
+            // 3. Apply the calculated location
+            containerLayout.Location = new Point(x, y);
+
+            Logger.Log($"Content panel layout centered at: {x}, {y} (Size: {containerLayout.Width}x{containerLayout.Height})");
+        }
 
         // NEW: Function to find all available serial ports dynamically.
         public Dictionary<string, string> GetAllSerialPorts()
@@ -1168,12 +1236,12 @@ namespace NV22SpectralInteg.Dashboard
         public Dictionary<string, int> testCounts = new Dictionary<string, int>
         {
             { "$1", 2 },
-            //{ "$2", 2 },
-            //{ "$5", 2 },
-            //{ "$10", 2 },
-            //{ "$20", 2 },
-            //{ "$50", 2 },
-            //{ "$100", 2 }
+            { "$2", 2 },
+            { "$5", 2 },
+            { "$10", 2 },
+            { "$20", 2 },
+            { "$50", 2 },
+            { "$100", 2 }
         };
 
         //public Dictionary<string, int> testCounts = new Dictionary<string, int>

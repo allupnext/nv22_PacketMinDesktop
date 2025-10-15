@@ -26,13 +26,26 @@ namespace NV22SpectralInteg.Dashboard
             this.Paint += new PaintEventHandler(ProcessingPopup_Paint);
 
             // Calculate responsive size
+            // Get the working area (screen bounds minus taskbar, etc.)
             Rectangle workingArea = Screen.PrimaryScreen.WorkingArea;
-            double widthPercentage = 0.30;
-            double heightPercentage = 0.40; // Increased height a bit to accommodate padding/spacing
 
-            int popupWidth = (int)(workingArea.Width * widthPercentage);
-            int popupHeight = (int)(workingArea.Height * heightPercentage);
-            this.Size = new Size(popupWidth, popupHeight);
+            // Set minimum and max desired size
+            int desiredWidth = 700;
+            int desiredHeight = 400;
+
+            // Optionally scale down if screen is smaller
+            int finalWidth = Math.Min(desiredWidth, workingArea.Width - 100);
+            int finalHeight = Math.Min(desiredHeight, workingArea.Height - 100);
+
+            this.Size = new Size(finalWidth, finalHeight);
+
+            // Center the form on screen manually
+            this.StartPosition = FormStartPosition.Manual;
+            this.Location = new Point(
+                (workingArea.Width - this.Width) / 2,
+                (workingArea.Height - this.Height) / 2
+            );
+
 
 
             // 1. Message Label
@@ -45,7 +58,7 @@ namespace NV22SpectralInteg.Dashboard
                 // Use a TableLayoutPanel for better control over spacing and centering vertically
                 Dock = DockStyle.None, // No dock initially for better manual positioning
                 AutoSize = false,
-                Size = new Size(popupWidth, (int)(popupHeight * 0.3)), // Take up top 30% of form height
+                Size = new Size(finalWidth, (int)(finalHeight * 0.3)), // Take up top 30% of form height
                 Location = new Point(0, 0) // Position at top
             };
             this.Controls.Add(messageLabel);
@@ -58,10 +71,10 @@ namespace NV22SpectralInteg.Dashboard
                 Image = File.Exists(imagePath) ? Image.FromFile(imagePath) : null, // Check if file exists
                 SizeMode = PictureBoxSizeMode.Zoom, // Use Zoom to scale it nicely within bounds
                 // Position and size the spinner dynamically
-                Width = (int)(popupWidth * 0.4), // 40% of popup width
-                Height = (int)(popupWidth * 0.5), // Keep it square
+                Width = (int)(finalWidth * 0.4), // 40% of popup width
+                Height = (int)(finalWidth * 0.5), // Keep it square
                 // Center the spinner horizontally and below the message label
-                Location = new Point((popupWidth - (int)(popupWidth * 0.4)) / 2, messageLabel.Bottom)
+                Location = new Point((finalWidth - (int)(finalWidth * 0.4)) / 2, messageLabel.Bottom)
             };
             this.Controls.Add(spinner);
 
@@ -73,7 +86,7 @@ namespace NV22SpectralInteg.Dashboard
                 Font = new Font("Poppins", 14F, FontStyle.Bold),
                 TextAlign = ContentAlignment.MiddleCenter,
                 AutoSize = false,
-                Width = popupWidth,
+                Width = finalWidth,
                 Height = 40,
                 Location = new Point(0, spinner.Bottom + 5) // Below the spinner
             };

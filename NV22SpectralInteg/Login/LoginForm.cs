@@ -3,6 +3,7 @@ using Newtonsoft.Json;
 using NV22SpectralInteg.Classes;
 using NV22SpectralInteg.Dashboard;
 using NV22SpectralInteg.InactivityManager;
+using NV22SpectralInteg.Model;
 using NV22SpectralInteg.NumPad;
 using NV22SpectralInteg.Services;
 using System;
@@ -124,7 +125,7 @@ namespace NV22SpectralInteg.Login
             this.StartPosition = FormStartPosition.CenterScreen;
 
 
-                loginPanel = new Panel
+            loginPanel = new Panel
             {
                 Size = new Size(500, 700),
                 BackColor = Color.Transparent
@@ -565,24 +566,33 @@ namespace NV22SpectralInteg.Login
                     processingPopup.Show(this);
                     await Task.Delay(100); // small delay helps ensure popup renders smoothly
 
-                    var (isValidSettlementCode, message, response) = await ApiService.SubmitSettlementReportAsync(phoneTextBox.Text.Trim());
+                    ApiResult<SettlementReportData> apiResult = await ApiService.SubmitSettlementReportAsync(phoneTextBox.Text.Trim());
 
-                    if (isValidSettlementCode)
+                    // Use the strongly-typed 'Success' property
+                    if (apiResult.Success)
                     {
-                        Logger.Log("Settlement code is valid.");
-                        Logger.Log($"✅ Settlement response received. Success: {isValidSettlementCode}, Message: {message}");
-                        Logger.Log($"🔍 Receipt URL: {response?.data?.RECEIPTURL}");
+                        // Access the data payload safely
+                        var settlementData = apiResult.Data;
 
-                        if (response?.data?.RECEIPTURL != null)
+                        // Access the message from the ApiResult object
+                        Logger.Log("Settlement code is valid.");
+                        Logger.Log($"✅ Settlement response received. Success: {apiResult.Success}, Message: {apiResult.ErrorMessage}");
+
+                        // Access the specific data property safely
+                        Logger.Log($"🔍 Receipt URL: {settlementData?.RECEIPTURL}");
+
+                        // Check the specific data property directly
+                        if (settlementData?.RECEIPTURL != null)
                         {
-                            string pdfUrl = response.data.RECEIPTURL;
+                            string pdfUrl = settlementData.RECEIPTURL;
 
                             var printer = new PdfPrintService.PdfPrintService();
                             await printer.PreviewAndPrintPdfFromUrl(pdfUrl);
 
-
                             processingPopup.Close();
-                            ShowResultAndPrintReceipt(response);
+
+                            // NOTE: Update ShowResultAndPrintReceipt to accept the type-safe result object
+                            ShowResultAndPrintReceipt(apiResult);
                             return;
                         }
                         else
@@ -592,12 +602,11 @@ namespace NV22SpectralInteg.Login
                             return;
                         }
                     }
-                    else
+                    else // Handle failure case
                     {
+                        Logger.Log($"❌ Settlement failed: {apiResult.ErrorMessage}");
                         processingPopup.Close();
-                        Logger.Log("Failed to generate settlement receipt! Please try again !!.");
-                        MessageBox.Show(message, "Report failed.", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        return;
+                        MessageBox.Show($"Settlement failed: {apiResult.ErrorMessage}", "Settlement Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                 }
                 catch (Exception ex)
@@ -802,6 +811,7 @@ namespace NV22SpectralInteg.Login
 
             // Reset the main title
             subtitle.Text = "Login";
+            phoneTextBox.Text = "";
 
             // Hide all OTP-related controls
             otpLabel.Visible = false;
