@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.Data.Sqlite;
+using NV22SpectralInteg.Model;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -169,7 +170,7 @@ namespace NV22SpectralInteg.Data
         }
 
 
-        public static dynamic GetAggregatedSettlementData(string kioskId, DateTime startTime, DateTime endTime)
+        public static AggregatedSettlementData GetAggregatedSettlementData(string kioskId, DateTime startTime, DateTime endTime)
         {
             string dbPath = Path.Combine(Application.StartupPath, "App_Data", "KioskTransactions.db");
             using var connection = new SqliteConnection($"Data Source={dbPath}");
@@ -179,10 +180,17 @@ namespace NV22SpectralInteg.Data
             string startOperator;
             DateTime effectiveStartTime;
 
+            var defaultResult = new AggregatedSettlementData
+            {
+                totalDenominationDepository = new List<DenominationSettlement>(),
+                totalSettlementAmount = 0m
+            };
+
             if (string.IsNullOrEmpty(AppSession.KioskId))
             {
                 Logger.Log("KioskId is null or empty. Cannot retrieve last report end date.");
-                return false; // Or handle this case appropriately based on your application's logic
+                // ✅ Return the valid, empty data structure
+                return defaultResult;
             }
 
             var data = TransactionRepository.GetLastReportEndDate(AppSession.KioskId);
@@ -223,7 +231,7 @@ namespace NV22SpectralInteg.Data
 
             cmd.Parameters.AddWithValue("@EndTime", endTime.ToString("yyyy-MM-dd HH:mm:ss.fff"));
 
-            var details = new List<object>();
+            var details = new List<DenominationSettlement>(); // <-- Use strong type here
             decimal grandTotalAmount = 0;
 
             using (var reader = cmd.ExecuteReader())
@@ -231,17 +239,19 @@ namespace NV22SpectralInteg.Data
                 while (reader.Read())
                 {
                     decimal total = reader.GetDecimal(2);
-                    details.Add(new
+                    grandTotalAmount += total;
+
+                    // Create the strongly-typed DenominationSettlement object
+                    details.Add(new DenominationSettlement
                     {
-                        denomination = reader.GetInt64(0), // Denomination type is flexible
+                        denomination = reader.GetInt64(0),
                         count = reader.GetInt64(1),
                         total = total
                     });
-                    grandTotalAmount += total;
                 }
             }
 
-            return new
+            return new AggregatedSettlementData
             {
                 totalDenominationDepository = details,
                 totalSettlementAmount = grandTotalAmount

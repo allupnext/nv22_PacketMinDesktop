@@ -49,6 +49,7 @@ namespace NV22SpectralInteg.Dashboard
             Logger.Log("🖥️ Dashboard initialized");
             InitializeComponent();
             _validator = validator;
+            _validator.ClearNoteEscrowCounts();
             this.config = config;
 
             IsApiEnabled = !config.IsDevelopment;
@@ -401,7 +402,7 @@ namespace NV22SpectralInteg.Dashboard
                 var result = await Task.Run(async () =>
                 {
                     // Perform printing in the background after the API call
-                    ApiResult<TransactionPersistData> apiResult = await ApiService.PersistTransactionAsync(_validator.NoteEscrowCounts);
+                    var apiResult = await ApiService.PersistTransactionAsync(_validator.NoteEscrowCounts);
 
                     // Perform printing in the background after the API call
                     // 1. Check for success directly on the ApiResult object
@@ -417,7 +418,7 @@ namespace NV22SpectralInteg.Dashboard
                             isSucceed = apiResult.Success,
 
                             // 2. Access message from the ApiResult object
-                            printmessage = apiResult.ErrorMessage,
+                            printmessage = apiResult.Message,
 
                             // 3. Access data properties safely and cast them (using a null check for safety)
                             // NOTE: We assume 'cryptoConversionFee' is a property on TransactionPersistData.
@@ -456,18 +457,18 @@ namespace NV22SpectralInteg.Dashboard
                 MessageBox.Show("A critical error occurred: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
-        private void ShowResultAndPrintReceipt(dynamic result)
+        private void ShowResultAndPrintReceipt(ApiResult<TransactionPersistData> result)
         {
 
-            var successPopup = new SuccessPopup(AppSession.CustomerName, currentGrandTotal, (bool)result.isSucceed, (string)result.message, "bankadd");
+            var successPopup = new SuccessPopup(AppSession.CustomerName, currentGrandTotal, (bool)result.Success, (string)result.Message, "bankadd");
             successPopup.ShowDialog(this);
 
             // Handle the user's choice from the popup
-            if ((bool)result.isSucceed)
+            if ((bool)result.Success)
             {
                 // Update balance and session info on success
-                AppSession.StoreBalance = result.data.storeBalance;
-                if (decimal.TryParse(result.data.userBalance?.ToString() ?? "0", out decimal newBalance))
+                AppSession.StoreBalance = result.Data.storeBalance;
+                if (decimal.TryParse(result.Data.userBalance.ToString() ?? "0", out decimal newBalance))
                 {
                     AppSession.CustomerBALANCE = newBalance;
                 }
@@ -500,6 +501,7 @@ namespace NV22SpectralInteg.Dashboard
             KioskIdleManager.Stop();
             stoprunning();
             AppSession.Clear();
+            _validator.ClearNoteEscrowCounts();
 
             Program.mainLoginForm.ResetToLogin();
             Program.mainLoginForm.Show();
@@ -515,7 +517,7 @@ namespace NV22SpectralInteg.Dashboard
 
         private void ResetForNewTransaction()
         {
-            Logger.Log("🔄 Resetting dashboard for a new transaction...");
+            Logger.Log("🔄 Resetting dashboard for a new transaction so clear ClearNoteEscrowCounts...");
 
             _validator.ClearNoteEscrowCounts();
 

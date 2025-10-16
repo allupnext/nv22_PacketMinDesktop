@@ -39,23 +39,19 @@ public static class ApiService
         Logger.Log($"ApiService initialized in '{Status}' mode.");
     }
 
-    private static async Task<ApiResult<T>> ProcessPostRequest<T>(string apiUrl, object requestBody)
+    private static async Task<ApiResult<T>> ProcessPostRequest<T>(string apiUrl, object requestBody, Action<string> logFunction = null)
     {
+        Action<string> logger = logFunction ?? Logger.Log;
         try
         {
             string jsonPayload = JsonConvert.SerializeObject(requestBody);
-            Logger.Log($"📦 Payload: {jsonPayload}");
+            logger($"📦 Payload: {jsonPayload}");
 
             var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
             HttpResponseMessage response = await client.PostAsync(apiUrl, content);
             string responseText = await response.Content.ReadAsStringAsync();
-            Logger.Log($"📬 API Response: {responseText}");
-
-            if (!response.IsSuccessStatusCode)
-            {
-                return new ApiResult<T>(false, $"HTTP Error: {response.StatusCode} {response.ReasonPhrase}", default);
-            }
+            logger($"📬 API Response: {responseText}");
 
             var apiResponse = JsonConvert.DeserializeObject<ApiResponse<T>>(responseText);
 
@@ -77,7 +73,7 @@ public static class ApiService
     // NOTE: This is a simplified example. In a real app, you would have proper response models
     // instead of 'dynamic' to ensure type safety.
 
-    public static async Task<(bool Success, string ErrorMessage)> ValidateAndSetKioskSessionAsync(string kioskId)
+    public static async Task<(bool Success, string Message)> ValidateAndSetKioskSessionAsync(string kioskId)
     {
         if (Status != "live") return (true, string.Empty);
 
@@ -91,7 +87,7 @@ public static class ApiService
 
         if (!result.Success)
         {
-            return (false, result.ErrorMessage);
+            return (false, result.Message);
         }
 
         // 3. Map Data to Session
@@ -179,7 +175,7 @@ public static class ApiService
         }
         else
         {
-            Logger.Log($"❌ Settlement submission failed. App Message: {apiResult.ErrorMessage}");
+            Logger.Log($"❌ Settlement submission failed. App Message: {apiResult.Message}");
         }
 
         // Return the clean ApiResult object
@@ -218,7 +214,7 @@ public static class ApiService
             if (!result.Success)
             {
                 // Log the error message from the result object
-                Logger.Log($"❌ SendOtp failed: {result.ErrorMessage}");
+                Logger.Log($"❌ SendOtp failed: {result.Message}");
                 return false;
             }
 
@@ -271,7 +267,7 @@ public static class ApiService
             if (!result.Success)
             {
                 // Log the error message from the result object
-                Logger.Log($"❌ VerifyOtp failed: {result.ErrorMessage}");
+                Logger.Log($"❌ VerifyOtp failed: {result.Message}");
                 return false;
             }
 
@@ -343,6 +339,8 @@ public static class ApiService
             // --- 4. Process Local DB Save ---
             if (apiResult.Success)
             {
+                AppSession.CustomerBALANCE = apiResult.Data.userBalance;
+                AppSession.StoreBalance = apiResult.Data.storeBalance;
                 // IMPORTANT: SaveTransactionWithDetails must be updated to accept a type-safe DTO 
                 // (TransactionPersistRequest) instead of 'dynamic' to maintain type-safety 
                 // throughout your application.
@@ -351,8 +349,9 @@ public static class ApiService
             }
             else
             {
-                Logger.Log($"❌ Transaction persistence failed. App Message: {apiResult.ErrorMessage}");
+                Logger.Log($"❌ Transaction persistence failed. App Message: {apiResult.Message}");
             }
+
 
             return apiResult;
         }
@@ -454,12 +453,12 @@ public static class ApiService
 
             // 2. Process API Call using generic helper
             // Expected Data Type T is AvailabilityResponseData (or an empty type if the 'data' is always null/empty)
-            var result = await ProcessPostRequest<AvailabilityResponseData>(apiUrl, requestBody);
+            var result = await ProcessPostRequest<AvailabilityResponseData>(apiUrl, requestBody, Logger.MachineLog);
 
             if (!result.Success)
             {
                 // Log the detailed error message from the helper/API response
-                Logger.MachineLog($"🚨 Failed to log machine availability: {result.ErrorMessage}");
+                Logger.MachineLog($"🚨 Failed to log machine availability: {result.Message}");
                 return false;
             }
 

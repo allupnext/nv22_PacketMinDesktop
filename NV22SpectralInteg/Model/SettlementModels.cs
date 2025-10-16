@@ -12,10 +12,9 @@ public class SettlementReportRequest
     public string storeRegId { get; set; }
     public string kioskId { get; set; }
     public string settlementCode { get; set; }
-    // Note: The service will populate these as formatted strings
     public string startTime { get; set; }
     public string endTime { get; set; }
-    public decimal totalDenominationDepository { get; set; }
+    public List<DenominationSettlement> totalDenominationDepository { get; set; }
     public decimal totalSettlementAmount { get; set; }
     public string kioskIpAddress { get; set; }
 }
@@ -27,10 +26,17 @@ public class SettlementReportData
     public string RECEIPTURL { get; set; }
 }
 
-// 3. (Optional, but recommended) A general class to represent the aggregated data
-// from TransactionRepository.GetAggregatedSettlementData
+public class DenominationSettlement
+{
+    public long denomination { get; set; }
+    public long count { get; set; }
+    public decimal total { get; set; }
+}
+
+// Define the main return structure
 public class AggregatedSettlementData
 {
-    public decimal totalDenominationDepository { get; set; }
+    // Must match the property names returned by the query, but with proper types
+    public List<DenominationSettlement> totalDenominationDepository { get; set; }
     public decimal totalSettlementAmount { get; set; }
 }
