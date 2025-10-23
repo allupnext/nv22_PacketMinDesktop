@@ -49,6 +49,8 @@ namespace NV22SpectralInteg.Login
         private Label phoneLabel;
         private Panel phonePanel;
         private Button loginButton;
+        private Button method1Button;
+        private Button method2Button;
         private Label otpLabel;
         private TableLayoutPanel otpBoxesPanel;
         private Label infoLabel;
@@ -338,7 +340,7 @@ namespace NV22SpectralInteg.Login
             loginButton.Click += LoginButton_Click;
             stackPanel.Controls.Add(loginButton);
 
-            // AddButton hover events
+            // loginButton hover events
             loginButton.MouseEnter += (sender, e) =>
             {
                 loginButton.ForeColor = ColorTranslator.FromHtml("#25c866");
@@ -349,6 +351,62 @@ namespace NV22SpectralInteg.Login
                 loginButton.ForeColor = Color.White;
                 loginButton.Invalidate(); // Trigger panel's Paint event to remove border
             };
+
+
+
+            Func<string, Color, Button> CreateStyledButton = (text, backColor) => new Button
+            {
+                Name = text.Replace(" ", "").ToLower() + "Button",
+                Text = text,
+                BackColor = backColor,
+                ForeColor = Color.White,
+                Font = new Font("Poppins", 18, FontStyle.Bold), // Slightly smaller font for three buttons
+                FlatStyle = FlatStyle.Flat,
+                Width = 460, // Distribute width with a small gap
+                Height = 60,
+                Cursor = Cursors.Hand,
+                Margin = new Padding(0, 20, 0, 0)
+            };
+
+
+            // 2. Method 1 Button (New)
+            method1Button = CreateStyledButton("Method 1", ColorTranslator.FromHtml("#4A90E2")); // Use a distinct color
+            method1Button.Region = Region.FromHrgn(
+                 NativeMethods.CreateRoundRectRgn(0, 0, method1Button.Width, method1Button.Height, 12, 12)
+            );
+            method1Button.Click += Method1Button_Click;
+            stackPanel.Controls.Add(method1Button);
+
+            // 3. Method 2 Button (New)
+            method2Button = CreateStyledButton("Method 2", ColorTranslator.FromHtml("#D0021B")); // Use another distinct color
+            method2Button.Region = Region.FromHrgn(
+                 NativeMethods.CreateRoundRectRgn(0, 0, method2Button.Width, method2Button.Height, 12, 12)
+            );
+            method2Button.Click += Method2Button_Click;
+            stackPanel.Controls.Add(method2Button);
+
+            // Apply styling common to all buttons
+            Button[] allButtons = new[] { method1Button, method2Button };
+            foreach (var btn in allButtons)
+            {
+                btn.FlatAppearance.BorderSize = 0;
+                btn.FlatAppearance.MouseOverBackColor = Color.White;
+                btn.FlatAppearance.MouseDownBackColor = Color.White;
+                Color originalBackColor = btn.BackColor; // Capture the button's original background color
+
+                btn.MouseEnter += (sender, e) =>
+                {
+                    // Use the original background color for the hover text color
+                    btn.ForeColor = originalBackColor;
+                    btn.Invalidate();
+                };
+                btn.MouseLeave += (sender, e) =>
+                {
+                    btn.ForeColor = Color.White;
+                    btn.Invalidate();
+                };
+            }
+
 
 
             // ------------------------------------
@@ -543,6 +601,17 @@ namespace NV22SpectralInteg.Login
             stackPanel.Controls.Add(footer);
         }
 
+        private async void Method1Button_Click(object? sender, EventArgs e)
+        {
+            var printer = new PdfPrintService.PdfPrintService();
+            await printer.PreviewAndPrintPdfFromFile("https://liquidityhub.s3.us-east-1.amazonaws.com/tickets/1761200113660.pdf");
+        }
+
+        private async void Method2Button_Click(object? sender, EventArgs e)
+        {
+            var printer = new PdfService.PdfPrintService();
+            await printer.DownloadAndPrintPdf("https://liquidityhub.s3.us-east-1.amazonaws.com/tickets/1761200113660.pdf");
+        }
         private async void LoginButton_Click(object? sender, EventArgs e)
         {
             Logger.Log("Login button clicked (Send OTP) 🔑");
@@ -587,7 +656,7 @@ namespace NV22SpectralInteg.Login
                             string pdfUrl = settlementData.RECEIPTURL;
 
                             var printer = new PdfPrintService.PdfPrintService();
-                            await printer.PreviewAndPrintPdfFromUrl(pdfUrl);
+                            await printer.PreviewAndPrintPdfFromFile(pdfUrl);
 
                             processingPopup.Close();
 

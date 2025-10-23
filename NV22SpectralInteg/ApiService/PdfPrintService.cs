@@ -1,8 +1,8 @@
-﻿using PdfiumViewer;
+﻿using PdfiumPdfDocument = PdfiumViewer.PdfDocument;
 using System;
 using System.Drawing.Printing;
-using System.Net.Http;
 using System.IO;
+using System.Net.Http;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -10,51 +10,67 @@ namespace NV22SpectralInteg.PdfPrintService
 {
     public class PdfPrintService
     {
-        public async Task PreviewAndPrintPdfFromUrl(string pdfUrl)
+        private static readonly string PdfFolderPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "KioskReportPDF");
+
+        private string GetFileNameFromUrl(string url)
         {
             try
             {
-                using (HttpClient client = new HttpClient())
+                Uri uri = new Uri(url);
+                string fileName = Path.GetFileName(uri.LocalPath);
+                if (string.IsNullOrEmpty(fileName))
+                    fileName = "downloaded_report.pdf";
+                if (!fileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+                    fileName += ".pdf";
+                return fileName;
+            }
+            catch
+            {
+                return "downloaded_report.pdf";
+            }
+        }
+
+        public async Task PreviewAndPrintPdfFromFile(string pdfUrl)
+        {
+            try
+            {
+                Directory.CreateDirectory(PdfFolderPath);
+
+                string fileName = GetFileNameFromUrl(pdfUrl);
+                string localPath = Path.Combine(PdfFolderPath, fileName);
+
+                using (var client = new HttpClient())
                 {
-                    HttpResponseMessage response = await client.GetAsync(pdfUrl);
-                    response.EnsureSuccessStatusCode();
+                    var bytes = await client.GetByteArrayAsync(pdfUrl);
+                    await File.WriteAllBytesAsync(localPath, bytes);
+                }
 
-                    using (Stream pdfStream = await response.Content.ReadAsStreamAsync())
+                using (var document = PdfiumPdfDocument.Load(localPath))
+                {
+                    using (var printDoc = document.CreatePrintDocument())
                     {
-                        using (var pdfDocument = PdfDocument.Load(pdfStream))
+                        using (var previewDialog = new PrintPreviewDialog())
                         {
-                            using (var printDocument = pdfDocument.CreatePrintDocument())
-                            {
-                                // 1. Set HIGH-QUALITY settings (for the physical print job)
-                                printDocument.DefaultPageSettings.PrinterResolution.Kind = PrinterResolutionKind.High;
-                                printDocument.DefaultPageSettings.Margins = new Margins(0, 0, 0, 0);
-
-                                // 2. DIRECTLY print the document without showing any dialog.
-                                // The job is sent straight to the default printer's queue.
-                                printDocument.Print();
-
-                                // 2. Create the PrintDialog
-                                //PrintDialog printDialog = new PrintDialog();
-                                //printDialog.Document = printDocument;
-
-                                //// 3. Show the dialog and check the result
-                                //if (printDialog.ShowDialog() == DialogResult.OK)
-                                //{
-                                //    // 4. Print the document using the settings chosen by the user in the dialog
-                                //    printDocument.Print();
-                                //}
-                            }
+                            previewDialog.Document = printDoc;
+                            previewDialog.ShowDialog();
                         }
+
+                        // After the preview, you can directly print the same document
+                        printDoc.Print();
                     }
                 }
             }
             catch (HttpRequestException httpEx)
             {
-                MessageBox.Show($"Could not download the file.\nError: {httpEx.Message}", "Network Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Failed to download PDF.\nError: {httpEx.Message}", "Download Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-            catch (Exception ex)
+            catch (IOException ioEx)
             {
-                MessageBox.Show($"An error occurred during printing: {ex.Message}", "Processing Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"File access error.\nError: {ioEx.Message}", "File Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            catch (Exception ex)  // Use generic exception because PdfException is not defined here
+            {
+                MessageBox.Show($"Unexpected error occurred.\nError: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
     }

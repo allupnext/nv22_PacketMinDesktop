@@ -23,6 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="IronPdf" Version="2025.10.8" />
     <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.3.0" />
     <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="9.0.9" />
     <PackageReference Include="MouseKeyHook" Version="5.7.1" />
