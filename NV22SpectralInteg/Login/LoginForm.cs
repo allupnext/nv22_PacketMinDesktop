@@ -36,7 +36,7 @@ namespace NV22SpectralInteg.Login
         private Label phonePrefix;
         private ComboBox countryDropdown;
         private List<CountryCode> countryCodes;
-
+             
         private Panel[] otpBoxContainers; 
         private TextBox[] otpTextBoxes;
         private string fullMobileNumber;
@@ -645,7 +645,7 @@ namespace NV22SpectralInteg.Login
 
                         // Access the message from the ApiResult object
                         Logger.Log("Settlement code is valid.");
-                        Logger.Log($"✅ Settlement response received. Success: {apiResult.Success}, Message: {apiResult.ErrorMessage}");
+                        Logger.Log($"✅ Settlement response received. Success: {apiResult.Success}, Message: {apiResult.Message}");
 
                         // Access the specific data property safely
                         Logger.Log($"🔍 Receipt URL: {settlementData?.RECEIPTURL}");
@@ -673,9 +673,10 @@ namespace NV22SpectralInteg.Login
                     }
                     else // Handle failure case
                     {
-                        Logger.Log($"❌ Settlement failed: {apiResult.ErrorMessage}");
+                        Logger.Log($"❌ Settlement failed: {apiResult.Message}");
                         processingPopup.Close();
-                        MessageBox.Show($"Settlement failed: {apiResult.ErrorMessage}", "Settlement Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show($"Settlement failed: {apiResult.Message}", "Settlement Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
                     }
                 }
                 catch (Exception ex)
@@ -751,14 +752,14 @@ namespace NV22SpectralInteg.Login
             }
         }
 
-        private void ShowResultAndPrintReceipt(dynamic result)
+        private void ShowResultAndPrintReceipt(ApiResult<SettlementReportData> result)
         {
 
-            var successPopup = new SuccessPopup(AppSession.CustomerName, 0, result.isSucceed != null ? (bool)result.isSucceed : true, (string)result.message ?? "ok", "pdf");
+            var successPopup = new SuccessPopup(AppSession.CustomerName, 0, result.Success != null ? (bool)result.Success : true, (string)result.Message ?? "ok", "pdf");
             successPopup.ShowDialog(this);
 
             // Handle the user's choice from the popup
-            if (result.isSucceed != null ? (bool)result.isSucceed : true)
+            if (result.Success != null ? (bool)result.Success : true)
             {
                 if (successPopup.DialogResult == DialogResult.OK)
                 {
@@ -1227,7 +1228,7 @@ namespace NV22SpectralInteg.Login
 
                 loadingLabel.BringToFront();
 
-                var (isValid, errorMessage) = await ApiService.ValidateAndSetKioskSessionAsync(kioskId);
+                var (isValid, Message) = await ApiService.ValidateAndSetKioskSessionAsync(kioskId);
 
                 this.Controls.Remove(loadingLabel);
                 loadingLabel.Dispose();
@@ -1243,7 +1244,7 @@ namespace NV22SpectralInteg.Login
                 }
                 else
                 {
-                    MessageBox.Show(errorMessage, "Validation Failed", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show(Message, "Validation Failed", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
             };
             kioskPanel.Visible = false;

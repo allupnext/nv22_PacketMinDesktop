@@ -140,7 +140,7 @@ namespace NV22SpectralInteg.Dashboard
             // Recipient Name Label
             Label nameLabel = new Label
             {
-                Text = recipientName, // The name goes here
+                Text = recipientName ?? "User", // The name goes here
                 Font = new Font("Poppins", 22F, FontStyle.Bold),
                 ForeColor = ColorTranslator.FromHtml("#11150f"),
                 Size = new Size(this.ClientSize.Width - 40, 60), 

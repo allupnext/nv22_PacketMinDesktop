@@ -27,6 +27,7 @@ public class TransactionPersistRequest
 
 public class TransactionPersistData
 {
-    public string TransactionReferenceId { get; set; } // Example field
+    public decimal userBalance { get; set; } 
+    public decimal storeBalance { get; set; } 
     public decimal cryptoConversionFee { get; set; }
 }
