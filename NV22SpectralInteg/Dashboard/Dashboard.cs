@@ -383,13 +383,13 @@ namespace NV22SpectralInteg.Dashboard
             Logger.Log("🟢 Preparing transaction...");
 
             //Safety check: Ensure there is actually data to send.
-            if (!_validator.NoteEscrowCounts.Any() && IsApiEnabled == true)
-            {
-                Logger.Log("⚠️ Confirm button clicked, but no amount was detected. Resetting.");
-                MessageBox.Show("No amount detected. Please insert notes to continue.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                ResetForNewTransaction(); // Reset the screen and restart polling.
-                return;
-            }
+            //if (!_validator.NoteEscrowCounts.Any() && IsApiEnabled == true)
+            //{
+            //    Logger.Log("⚠️ Confirm button clicked, but no amount was detected. Resetting.");
+            //    MessageBox.Show("No amount detected. Please insert notes to continue.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            //    ResetForNewTransaction(); // Reset the screen and restart polling.
+            //    return;
+            //}
 
             var processingPopup = new ProcessingPopup();
             try
@@ -468,10 +468,6 @@ namespace NV22SpectralInteg.Dashboard
             {
                 // Update balance and session info on success
                 AppSession.StoreBalance = result.Data.storeBalance;
-                if (decimal.TryParse(result.Data.userBalance.ToString() ?? "0", out decimal newBalance))
-                {
-                    AppSession.CustomerBALANCE = newBalance;
-                }
 
                 if (successPopup.DialogResult == DialogResult.OK)
                 {

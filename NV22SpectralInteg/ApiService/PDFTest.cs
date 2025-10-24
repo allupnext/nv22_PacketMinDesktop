@@ -74,7 +74,7 @@ public class PdfPrintService
                 using (var pdf = PdfDocument.FromFile(localPath))
                 {
                     // Perform a silent print job
-                    await pdf.Print();
+                    await pdf.Print(true);
                     Logger.Log($"Printed PDF silently: {localPath}");
                 }
             }
