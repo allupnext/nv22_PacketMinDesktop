@@ -1,5 +1,5 @@
 {
-  "ComPort": "COM8",
+  "ComPort": "COM7",
   "IsDevelopment": false,
   "ScreenTimeouts": {
     "LoginScreen": 10,
