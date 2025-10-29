@@ -28,11 +28,11 @@ namespace NV22SpectralInteg.PdfPrintService
                 //printDoc.PrinterSettings.PrinterNane = printerNane;
                 printDoc.PrinterSettings.Copies = 1;
 
-                var widthInHundredths = (int)(80 / 25.4 * 105); // 89 mm ~ 315
+                var widthInHundredths = (int)(68 / 25.4 * 105); // 80 mm ~ 315
                 var heightInHundredths = (int)(210 / 25.4 * 105); // 210 mm ~ 827
 
                 printDoc.DefaultPageSettings.PaperSize = new PaperSize("80x210mm", widthInHundredths, heightInHundredths);
-                printDoc.DefaultPageSettings.Margins = new Margins(5, 5, 5, 5);
+                printDoc.DefaultPageSettings.Margins = new Margins(0, 0, 0, 0);
 
                 // No auto orientation detection — just set fixed or decide yourself
                 printDoc.DefaultPageSettings.Landscape = false; // or true if you want landscape always
