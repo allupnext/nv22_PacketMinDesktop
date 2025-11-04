@@ -18,7 +18,6 @@ namespace NV22SpectralInteg.Dashboard
     {
         private bool _isSucceed;
         private string _status;
-        private readonly AppConfig config;
 
         // Constructor that accepts the name and amount to display
         public SuccessPopup(string recipientName, decimal amount, bool isSucceed, string message, string status)
@@ -28,21 +27,8 @@ namespace NV22SpectralInteg.Dashboard
             InitializeCustomComponents(recipientName, amount, isSucceed, message,status);
             KioskIdleManager.Initialize(Logout);
 
-            // Get the full path to the JSON file
-            string configPath = Path.Combine(Application.StartupPath, "config.json");
-            // Read the entire file into a string
-            string jsonContent = File.ReadAllText(configPath);
-            // Deserialize the JSON string into the class field
-            this.config = JsonConvert.DeserializeObject<AppConfig>(jsonContent);
-
-
-            int idleTime = config.ScreenTimeouts.ContainsKey("TransactionPopUp")
-               ? config.ScreenTimeouts["TransactionPopUp"]
-               : config.ScreenTimeouts["Default"];
-
-
-            Logger.Log($"✨ SuccessPopup created. Starting {idleTime}-second inactivity timer.");
-            KioskIdleManager.Start(idleTime, "Logout");
+            Logger.Log($"✨ SuccessPopup created. Starting {30}-second inactivity timer.");
+            KioskIdleManager.Start(30, "Logout");
 
         }
         private void SuccessPopup_Shown(object sender, EventArgs e)

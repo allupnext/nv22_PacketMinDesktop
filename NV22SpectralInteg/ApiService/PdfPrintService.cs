@@ -19,7 +19,7 @@ namespace NV22SpectralInteg.PdfPrintService
 
             try
             {
-                string filePath = await DownloadPdfAsync(pdfUrl);
+                string filePath = await DownloadLatestPdfAsync(pdfUrl);
                 Logger.Log($"PDF successfully downloaded to: {filePath}");
 
                 var pdf = IronPdf.PdfDocument.FromFile(filePath); 
@@ -62,14 +62,27 @@ namespace NV22SpectralInteg.PdfPrintService
             }
         }
 
-        private async Task<string> DownloadPdfAsync(string pdfUrl)
+        private async Task<string> DownloadLatestPdfAsync(string pdfUrl)
         {
             string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
             string reportsFolder = Path.Combine(desktopPath, "KioskReports");
 
             Directory.CreateDirectory(reportsFolder);
 
-            // Generate a clean filename (fallback if URL doesn't contain one)
+            // STEP 1: Delete all old PDFs before saving new one ---
+            try
+            {
+                foreach (var oldFile in Directory.GetFiles(reportsFolder, "*.pdf"))
+                {
+                    File.Delete(oldFile);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"Warning: Failed to delete old PDFs: {ex.Message}");
+            }
+
+            // STEP 2: Build the filename from the URL ---
             string fileName = Path.GetFileName(new Uri(pdfUrl).AbsolutePath);
             if (string.IsNullOrWhiteSpace(fileName) || !fileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
             {
@@ -78,6 +91,7 @@ namespace NV22SpectralInteg.PdfPrintService
 
             string filePath = Path.Combine(reportsFolder, fileName);
 
+            // --- STEP 3: Download the PDF ---
             using var response = await _httpClient.GetAsync(pdfUrl, HttpCompletionOption.ResponseHeadersRead);
             response.EnsureSuccessStatusCode();
 

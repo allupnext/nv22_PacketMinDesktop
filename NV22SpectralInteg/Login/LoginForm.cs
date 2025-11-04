@@ -645,12 +645,8 @@ namespace NV22SpectralInteg.Login
             {
                 Logger.Log("OTP sent successfully. Showing OTP verification controls. ✅");
 
-                int idleTime = config.ScreenTimeouts.ContainsKey("LoginScreen")
-                    ? config.ScreenTimeouts["LoginScreen"]
-                    : config.ScreenTimeouts["Default"];
-
-                Logger.Log($"✨ In Login OTP sent so Starting KioskIdleManager with {idleTime}-second timeout for OTP screen.");
-                KioskIdleManager.Start(idleTime, "Logout");
+                Logger.Log($"✨ In Login OTP sent so Starting KioskIdleManager with {30}-second timeout for OTP screen.");
+                KioskIdleManager.Start(30, "Logout");
 
                 // Hide ONLY the login button
                 loginButton.Visible = false;
@@ -750,13 +746,8 @@ namespace NV22SpectralInteg.Login
 
                 KioskIdleManager.Initialize(Program.PerformLogout);
 
-                // START the 10 - second timer for the Privacy Policy.
-                int idleTime = config.ScreenTimeouts.ContainsKey("PrivacyPolicyScreen")
-                   ? config.ScreenTimeouts["PrivacyPolicyScreen"]
-                   : config.ScreenTimeouts["Default"];
-
-                Logger.Log($"✨ Starting {idleTime}-second timer for Privacy Policy.");
-                KioskIdleManager.Start(idleTime, "Logout");
+                Logger.Log($"✨ Starting {30}-second timer for Privacy Policy.");
+                KioskIdleManager.Start(30, "Logout");
 
 
                 var terms = new NV22SpectralInteg.PrivacyPolicy.PrivacyPolicyWindow(dashboard);
@@ -769,13 +760,9 @@ namespace NV22SpectralInteg.Login
                 {
                     Logger.Log("Privacy Policy accepted ✅. Starting dashboard main loop.");
                     KioskIdleManager.Initialize(dashboard.PerformTransaction);
-                    // START the 20 - second timer for the Dashboard.
-                    int idleDTime = config.ScreenTimeouts.ContainsKey("DashboardScreen")
-                   ? config.ScreenTimeouts["DashboardScreen"]
-                   : config.ScreenTimeouts["Default"];
-
-                    Logger.Log($"✨ Starting {idleDTime}-second timer for Dashboard.");
-                    KioskIdleManager.Start(idleDTime, "Logout");
+                   
+                    Logger.Log($"✨ Starting {60}-second timer for Dashboard.");
+                    KioskIdleManager.Start(60, "Logout");
 
                     dashboard.MainLoop();
                 }
@@ -808,39 +795,40 @@ namespace NV22SpectralInteg.Login
             KioskIdleManager.Stop();
 
             Logger.LogSeparator("USER Logout");
-            KioskIdleManager.Initialize(Program.PerformLogout);
 
-            // Reset the main title
+            // Reset UI first
             subtitle.Text = "Login";
             phoneTextBox.Text = "";
 
-            // Hide all OTP-related controls
+            // Hide OTP-related controls
             otpLabel.Visible = false;
             otpBoxesPanel.Visible = false;
             infoLabel.Visible = false;
             verifyButton.Visible = false;
             timerLabel.Visible = false;
             resendButton.Visible = false;
-            currentNumpad.Hide();   
+            currentNumpad.Hide();
 
             // Show the initial login button
             loginButton.Visible = true;
 
-            // Clear any text from input fields
+            // Clear OTP boxes
             foreach (var box in otpTextBoxes)
-            {
                 box.Clear();
-            }
 
-            // Stop the countdown timer if it's running
+            // Stop countdown timer
             countdownTimer.Stop();
 
-            // Set the focus back to the phone number input
+            // Recalculate layout before focus
+            CenterLoginUI(loginPanel);
+
+            // Set focus
             phoneTextBox.Focus();
 
-            // Recalculate the layout
-            CenterLoginUI(loginPanel);
+            // Finally re-initialize idle manager
+            KioskIdleManager.Initialize(Program.PerformLogout);
         }
+
 
         private void ShowNumpad(TextBox target, string targetName, TextBox[]? otpBoxes = null, int currentIndex = -1)
         {
