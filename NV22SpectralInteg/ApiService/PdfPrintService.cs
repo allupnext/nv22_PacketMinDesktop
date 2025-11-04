@@ -37,13 +37,13 @@ namespace NV22SpectralInteg.PdfPrintService
                 // No auto orientation detection — just set fixed or decide yourself
                 printDoc.DefaultPageSettings.Landscape = false; // or true if you want landscape always
 
-                using (PrintPreviewDialog previewDialog = new PrintPreviewDialog())
-                {
-                    previewDialog.Document = printDoc;
-                    previewDialog.Width = 800;
-                    previewDialog.Height = 600;
-                    previewDialog.ShowDialog();
-                }
+                //using (PrintPreviewDialog previewDialog = new PrintPreviewDialog())
+                //{
+                //    previewDialog.Document = printDoc;
+                //    previewDialog.Width = 800;
+                //    previewDialog.Height = 600;
+                //    previewDialog.ShowDialog();
+                //}
 
                 printDoc.Print();
                 Logger.Log("Kiosk report Printed successfully");

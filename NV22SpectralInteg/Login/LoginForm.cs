@@ -682,7 +682,7 @@ namespace NV22SpectralInteg.Login
         private void ShowResultAndPrintReceipt(ApiResult<SettlementReportData> result)
         {
 
-            var successPopup = new SuccessPopup(AppSession.CustomerName, 0, result.Success != null ? (bool)result.Success : true, (string)result.Message ?? "ok", "pdf");
+            var successPopup = new SuccessPopup(AppSession.StoreName!, 0, result.Success != null ? (bool)result.Success : true, (string)result.Message ?? "ok", "pdf");
             successPopup.ShowDialog(this);
 
             // Handle the user's choice from the popup

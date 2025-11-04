@@ -29,11 +29,7 @@ namespace NV22SpectralInteg
 
         public static void Clear()
         {
-            //CustomerRegId = null;
-            CustomerName = "Owner";
-            StoreName = null;
-            StoreAddress = null;
-            StoreBalance = null;
+            CustomerName = "User";
             CustomerMobile = null;
             CustomerBALANCE = 0.00m;
             smsId = null;
