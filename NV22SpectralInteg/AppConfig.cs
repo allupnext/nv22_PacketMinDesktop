@@ -10,5 +10,7 @@ namespace NV22SpectralInteg
     {
         public required string ComPort { get; set; }
         public bool IsDevelopment { get; set; }
+        public bool UpdateKioskId { get; set; }
+
     }
 }

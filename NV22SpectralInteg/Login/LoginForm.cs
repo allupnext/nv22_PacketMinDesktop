@@ -2,6 +2,7 @@
 using Newtonsoft.Json;
 using NV22SpectralInteg.Classes;
 using NV22SpectralInteg.Dashboard;
+using NV22SpectralInteg.Data;
 using NV22SpectralInteg.InactivityManager;
 using NV22SpectralInteg.Model;
 using NV22SpectralInteg.NumPad;
@@ -1000,7 +1001,9 @@ namespace NV22SpectralInteg.Login
         private void LoginForm_Shown(object? sender, EventArgs e)
         {
             this.Opacity = 1;
-            if (string.IsNullOrEmpty(AppSession.KioskId))
+            var kioskInfo = TransactionRepository.GetKioskInfo();
+
+            if (string.IsNullOrEmpty(kioskInfo.kioskId) || config.UpdateKioskId)
             {
                 kioskPanel.Visible = true;
                 loginPanel.Visible = false;
@@ -1011,6 +1014,11 @@ namespace NV22SpectralInteg.Login
             }
             else
             {
+                AppSession.KioskId = kioskInfo.kioskId;
+                AppSession.KioskRegId = kioskInfo.kioskRegId;
+                AppSession.StoreName = kioskInfo.storeName;
+                AppSession.StoreAddress = kioskInfo.storeAddress;
+
                 kioskPanel.Visible = false;
                 loginPanel.Visible = true;
                 if (subtitle != null)

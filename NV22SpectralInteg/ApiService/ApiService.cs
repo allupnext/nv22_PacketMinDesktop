@@ -102,10 +102,16 @@ public static class ApiService
         AppSession.StoreName = data.KIOSKNAME;
         AppSession.StoreAddress = $"{data.ADDRESS}, {data.CITY}, {data.LOCATION}, {data.ZIPCODE}";
 
+        TransactionRepository.SaveKioskInfo(
+            AppSession.KioskId,
+            AppSession.KioskRegId,
+            AppSession.StoreName,
+            AppSession.StoreAddress
+        );
+
         return (true, string.Empty);
     }
 
-    // In your API/Service class
 
     public static async Task<ApiResult<SettlementReportData>> SubmitSettlementReportAsync(string settlementCode)
     {

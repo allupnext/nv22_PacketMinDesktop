@@ -4,6 +4,7 @@ using NV22SpectralInteg.Model;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.NetworkInformation;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -65,6 +66,17 @@ namespace NV22SpectralInteg.Data
                     ReportUrl TEXT
                 );";
 
+                // Create KioskInfo table to store basic kiosk info
+                string createKioskInfoTable = @"
+                CREATE TABLE IF NOT EXISTS KioskInfo (
+                    Id INTEGER PRIMARY KEY CHECK (Id = 1),
+                    KioskId TEXT,
+                    KioskRegId TEXT,
+                    StoreName TEXT,
+                    StoreAddress TEXT
+                );";
+
+
                 using (var cmd = new SqliteCommand(createKioskMetadataTable, connection))
                 {
                     cmd.ExecuteNonQuery();
@@ -81,6 +93,11 @@ namespace NV22SpectralInteg.Data
                 }
 
 
+                using (var cmd = new SqliteCommand(createKioskInfoTable, connection))
+                {
+                    cmd.ExecuteNonQuery();
+                }
+
                 //string insertKioskMetadata = @"
                 //    INSERT INTO KioskReport (KioskId, SettlementCode, StartDate, ReportGeneratedDate, ReportUrl)
                 //    VALUES (@KioskId, @SettlementCode, @StartDate, @ReportGeneratedDate, @ReportUrl);";
@@ -95,7 +112,41 @@ namespace NV22SpectralInteg.Data
 
                 //    cmd.ExecuteNonQuery();
                 //}
-                
+
+
+
+                // Insert dummy transaction data (only if table is empty)
+                string checkTransactionCount = "SELECT COUNT(*) FROM Transactions;";
+                using (var checkCmd = new SqliteCommand(checkTransactionCount, connection))
+                {
+                    var result = checkCmd.ExecuteScalar();
+                    long count = (result == null || result == DBNull.Value) ? 0 : Convert.ToInt64(result);
+
+                    if (count == 0)
+                    {
+                        string insertTransactions = @"
+                        INSERT INTO Transactions (TransactionId, Timestamp, KioskId, KioskRegId, CustomerRegId, KioskTotalAmount)
+                        VALUES 
+                            ('TXN001', '2025-11-05 03:10:00', '3', '63', '27', 10.00);";
+
+                        using (var insertCmd = new SqliteCommand(insertTransactions, connection))
+                        {
+                            insertCmd.ExecuteNonQuery();
+                        }
+
+                        // Insert dummy transaction details
+                        string insertTransactionDetails = @"
+                        INSERT INTO TransactionDetails (TransactionId, Denomination, Count, Total)
+                        VALUES 
+                            ('TXN001', 10, 1, 10.00);";
+
+                        using (var detailsCmd = new SqliteCommand(insertTransactionDetails, connection))
+                        {
+                            detailsCmd.ExecuteNonQuery();
+                        }
+                    }
+                }
+
             }
         }
 
@@ -227,9 +278,9 @@ namespace NV22SpectralInteg.Data
             cmd.Parameters.AddWithValue("@KioskId", kioskId);
 
             // Always add the StartTime parameter (passing the effective/calculated time)
-            cmd.Parameters.AddWithValue("@StartTimeParam", effectiveStartTime.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            cmd.Parameters.AddWithValue("@StartTimeParam", effectiveStartTime.ToString("yyyy-MM-dd HH:mm:ss"));
 
-            cmd.Parameters.AddWithValue("@EndTime", endTime.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+            cmd.Parameters.AddWithValue("@EndTime", endTime.ToString("yyyy-MM-dd HH:mm:ss"));
 
             var details = new List<DenominationSettlement>(); // <-- Use strong type here
             decimal grandTotalAmount = 0;
@@ -259,6 +310,68 @@ namespace NV22SpectralInteg.Data
         }
 
 
-       
+
+
+
+
+
+
+
+
+
+        // Kiosk detail storage methods would go here
+
+        public static void SaveKioskInfo(string kioskId, string kioskRegId, string storeName, string storeAddress)
+        {
+            using var connection = new SqliteConnection($"Data Source={DbPath}");
+            connection.Open();
+
+            string checkQuery = "SELECT COUNT(*) FROM KioskInfo;";
+            using var checkCmd = new SqliteCommand(checkQuery, connection);
+            var result = checkCmd.ExecuteScalar();
+            long count = (result == null || result == DBNull.Value) ? 0 : Convert.ToInt64(result);
+
+            string sql;
+
+            if (count == 0)
+            {
+                sql = "INSERT INTO KioskInfo (Id, KioskId, KioskRegId, StoreName, StoreAddress) VALUES (1, @KioskId, @KioskRegId, @StoreName, @StoreAddress);";
+            }
+            else
+            {
+                sql = "UPDATE KioskInfo SET KioskId = @KioskId, KioskRegId = @KioskRegId, StoreName = @StoreName, StoreAddress = @StoreAddress WHERE Id = 1;";
+            }
+
+            using var cmd = new SqliteCommand(sql, connection);
+            cmd.Parameters.AddWithValue("@KioskId", kioskId);
+            cmd.Parameters.AddWithValue("@KioskRegId", kioskRegId);
+            cmd.Parameters.AddWithValue("@StoreName", storeName);
+            cmd.Parameters.AddWithValue("@StoreAddress", storeAddress);
+            cmd.ExecuteNonQuery();
+        }
+
+
+        public static (string? kioskId, string? kioskRegId, string? storeName, string? storeAddress) GetKioskInfo()
+        {
+            using var connection = new SqliteConnection($"Data Source={DbPath}");
+            connection.Open();
+
+            string sql = "SELECT KioskId, KioskRegId, StoreName, StoreAddress FROM KioskInfo WHERE Id = 1;";
+            using var cmd = new SqliteCommand(sql, connection);
+
+            using var reader = cmd.ExecuteReader();
+            if (reader.Read())
+            {
+                return (
+                    reader["KioskId"]?.ToString(),
+                    reader["KioskRegId"]?.ToString(),
+                    reader["StoreName"]?.ToString(),
+                    reader["StoreAddress"]?.ToString()
+                );
+            }
+
+            return (null, null, null, null);
+        }
+
     }
 }

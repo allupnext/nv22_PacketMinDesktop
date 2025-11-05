@@ -1,4 +1,29 @@
 {
   "ComPort": "COM7",
-  "IsDevelopment": false   
+  "IsDevelopment": false,
+  "UpdateKioskId": false
 }
+
+
+// ================================================
+// PocketMint – Default Configuration Guide
+// ================================================
+//
+// This section defines the default settings used by the application.
+// You can edit these values to match your setup or environment.
+//
+// How to use:
+// - Open this configuration file before running the application.
+// - Update the values according to your device and deployment.
+//
+// Example:
+// {
+//   "ComPort": "COM7",          // The COM port your device is connected to
+//   "IsDevelopment": false,     // Set to false only
+//   "UpdateKioskId": false      // Keep false so the Kiosk ID is not changed
+// }
+//
+// Notes:
+// - Make sure the COM port matches the actual port used by your hardware.
+// - For production systems, always keep "IsDevelopment" and "UpdateKioskId" as false.
+// ================================================
