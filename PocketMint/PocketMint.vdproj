@@ -471,8 +471,8 @@
         {
         "Name" = "8:Microsoft Visual Studio"
         "ProductName" = "8:PocketMint"
-        "ProductCode" = "8:{B4000D8E-FCDA-45BC-B2D0-C4FBF94FC134}"
-        "PackageCode" = "8:{49154AA9-F7C4-43B2-B34C-3B71640A314E}"
+        "ProductCode" = "8:{65B55EE7-95E9-47F5-AC4D-CEE4D05DFDFA}"
+        "PackageCode" = "8:{A1C23A8C-72E1-49CE-A1F1-FC07356390D9}"
         "UpgradeCode" = "8:{45C2E800-F168-4325-B710-E02C2B445A57}"
         "AspNetVersion" = "8:4.0.30319.0"
         "RestartWWWService" = "11:FALSE"
