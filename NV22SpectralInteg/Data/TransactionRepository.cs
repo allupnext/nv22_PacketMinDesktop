@@ -127,7 +127,7 @@ namespace NV22SpectralInteg.Data
                         string insertTransactions = @"
                         INSERT INTO Transactions (TransactionId, Timestamp, KioskId, KioskRegId, CustomerRegId, KioskTotalAmount)
                         VALUES 
-                            ('TXN001', '2025-11-05 03:10:00', '3', '63', '27', 10.00);";
+                            ('TXN001', '2025-11-07 04:31:00', '3', '63', '27', 10.00);";
 
                         using (var insertCmd = new SqliteCommand(insertTransactions, connection))
                         {

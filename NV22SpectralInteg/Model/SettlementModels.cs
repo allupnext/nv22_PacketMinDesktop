@@ -23,6 +23,7 @@ public class SettlementReportRequest
 public class SettlementReportData
 {
     // Ensure this matches the expected JSON key case (often all caps)
+    public string STORENAME { get; set; }
     public string RECEIPTURL { get; set; }
 }
 
