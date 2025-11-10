@@ -1,5 +1,6 @@
 ﻿using NV22SpectralInteg.InactivityManager;
 using NV22SpectralInteg.Login;
+using NV22SpectralInteg.Network;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -132,8 +133,20 @@ namespace NV22SpectralInteg.PrivacyPolicy
             closeButton.BringToFront();
         }
 
-        private void AcceptButton_Click(object sender, EventArgs e)
+        private async void AcceptButton_Click(object sender, EventArgs e)
         {
+            var internet = await NetworkHelper.IsInternetAccessibleDetailedAsync();
+            if (!internet.IsConnected)
+            {
+                MessageBox.Show("No internet connection detected.",
+                                    "Network Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Logger.Log($"Connected: {internet.IsConnected}, Reason: {internet.Reason}");
+                AppSession.Clear();
+                Program.mainLoginForm.ResetToLogin();
+                Program.mainLoginForm.Show();
+                return;
+            }
+
             this.DialogResult = DialogResult.OK;
             this.Close();
         }

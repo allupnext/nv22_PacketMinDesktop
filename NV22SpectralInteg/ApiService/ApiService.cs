@@ -99,13 +99,15 @@ public static class ApiService
 
         AppSession.KioskId = data.KIOSKID;
         AppSession.KioskRegId = data.REGID;
-        AppSession.StoreName = data.KIOSKNAME;
+        AppSession.StoreName = data.STORENAME;
+        AppSession.KioskName = data.KIOSKNAME;
         AppSession.StoreAddress = $"{data.ADDRESS}, {data.CITY}, {data.LOCATION}, {data.ZIPCODE}";
 
         TransactionRepository.SaveKioskInfo(
             AppSession.KioskId,
             AppSession.KioskRegId,
             AppSession.StoreName,
+            AppSession.KioskName,
             AppSession.StoreAddress
         );
 
@@ -352,6 +354,9 @@ public static class ApiService
                 // throughout your application.
                 SaveTransactionWithDetails(requestBody);
                 Logger.Log("✅ Transaction persisted successfully, saving locally.");
+
+                TransactionRepository.ClearTxnInfo(AppSession.CustomerMobile!);
+                Logger.Log("✅ Local transaction data cleared successfully.");
             }
             else
             {

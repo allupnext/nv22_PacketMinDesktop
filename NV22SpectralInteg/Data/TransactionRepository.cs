@@ -73,9 +73,19 @@ namespace NV22SpectralInteg.Data
                     KioskId TEXT,
                     KioskRegId TEXT,
                     StoreName TEXT,
+                    KioskName TEXT,
                     StoreAddress TEXT
                 );";
 
+                // Create penddingTxnInfo table to store basic kiosk info
+                string TxnInfoTable = @"
+                    CREATE TABLE IF NOT EXISTS RemainingTxnInfo (
+                        Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        CustomerMobile TEXT NOT NULL,
+                        Denomination TEXT NOT NULL,
+                        Count INTEGER NOT NULL,
+                        UNIQUE(CustomerMobile, Denomination)
+                    );";
 
                 using (var cmd = new SqliteCommand(createKioskMetadataTable, connection))
                 {
@@ -94,6 +104,11 @@ namespace NV22SpectralInteg.Data
 
 
                 using (var cmd = new SqliteCommand(createKioskInfoTable, connection))
+                {
+                    cmd.ExecuteNonQuery();
+                }
+
+                using (var cmd = new SqliteCommand(TxnInfoTable, connection))
                 {
                     cmd.ExecuteNonQuery();
                 }
@@ -205,7 +220,7 @@ namespace NV22SpectralInteg.Data
             string insertReport = @"
                 INSERT INTO KioskReport (KioskId, SettlementCode, StartDate, ReportGeneratedDate, ReportUrl)
                 VALUES (@KioskId, @SettlementCode, @StartDate, @ReportGeneratedDate, @ReportUrl);";
-            
+
             using (var cmd = new SqliteCommand(insertReport, connection, transaction))
             {
                 cmd.Parameters.AddWithValue("@KioskId", kioskId);
@@ -216,7 +231,7 @@ namespace NV22SpectralInteg.Data
 
                 cmd.ExecuteNonQuery();
             }
-            
+
             transaction.Commit();
         }
 
@@ -321,7 +336,7 @@ namespace NV22SpectralInteg.Data
 
         // Kiosk detail storage methods would go here
 
-        public static void SaveKioskInfo(string kioskId, string kioskRegId, string storeName, string storeAddress)
+        public static void SaveKioskInfo(string kioskId, string kioskRegId, string storeName, string kioskName, string storeAddress)
         {
             using var connection = new SqliteConnection($"Data Source={DbPath}");
             connection.Open();
@@ -335,28 +350,29 @@ namespace NV22SpectralInteg.Data
 
             if (count == 0)
             {
-                sql = "INSERT INTO KioskInfo (Id, KioskId, KioskRegId, StoreName, StoreAddress) VALUES (1, @KioskId, @KioskRegId, @StoreName, @StoreAddress);";
+                sql = "INSERT INTO KioskInfo (Id, KioskId, KioskRegId, StoreName, KioskName, StoreAddress) VALUES (1, @KioskId, @KioskRegId, @StoreName, @KioskName, @StoreAddress);";
             }
             else
             {
-                sql = "UPDATE KioskInfo SET KioskId = @KioskId, KioskRegId = @KioskRegId, StoreName = @StoreName, StoreAddress = @StoreAddress WHERE Id = 1;";
+                sql = "UPDATE KioskInfo SET KioskId = @KioskId, KioskRegId = @KioskRegId, StoreName = @StoreName, KioskName = @KioskName, StoreAddress = @StoreAddress WHERE Id = 1;";
             }
 
             using var cmd = new SqliteCommand(sql, connection);
             cmd.Parameters.AddWithValue("@KioskId", kioskId);
             cmd.Parameters.AddWithValue("@KioskRegId", kioskRegId);
             cmd.Parameters.AddWithValue("@StoreName", storeName);
+            cmd.Parameters.AddWithValue("@KioskName", kioskName);
             cmd.Parameters.AddWithValue("@StoreAddress", storeAddress);
             cmd.ExecuteNonQuery();
         }
 
 
-        public static (string? kioskId, string? kioskRegId, string? storeName, string? storeAddress) GetKioskInfo()
+        public static (string? kioskId, string? kioskRegId, string? storeName, string? kioskName, string? storeAddress) GetKioskInfo()
         {
             using var connection = new SqliteConnection($"Data Source={DbPath}");
             connection.Open();
 
-            string sql = "SELECT KioskId, KioskRegId, StoreName, StoreAddress FROM KioskInfo WHERE Id = 1;";
+            string sql = "SELECT KioskId, KioskRegId, StoreName, KioskName, StoreAddress FROM KioskInfo WHERE Id = 1;";
             using var cmd = new SqliteCommand(sql, connection);
 
             using var reader = cmd.ExecuteReader();
@@ -366,12 +382,118 @@ namespace NV22SpectralInteg.Data
                     reader["KioskId"]?.ToString(),
                     reader["KioskRegId"]?.ToString(),
                     reader["StoreName"]?.ToString(),
+                    reader["KioskName"]?.ToString(),
                     reader["StoreAddress"]?.ToString()
                 );
             }
 
-            return (null, null, null, null);
+            return (null, null, null, null, null);
         }
 
+
+
+
+
+
+
+
+
+
+
+
+        // Txn Save
+
+        public static void SaveTxn(string customerMobile, string denomination, int count)
+        {
+            using var connection = new SqliteConnection($"Data Source={DbPath}");
+            connection.Open();
+
+            // Ensure full durability for sudden power loss
+            using (var pragmaCmd = new SqliteCommand("PRAGMA synchronous=FULL;", connection))
+            {
+                pragmaCmd.ExecuteNonQuery();
+            }
+
+            using var transaction = connection.BeginTransaction();
+
+            string insertOrUpdateQuery = @"
+                INSERT INTO RemainingTxnInfo (CustomerMobile, Denomination, Count)
+                VALUES (@CustomerMobile, @Denomination, @Count)
+                ON CONFLICT(CustomerMobile, Denomination)
+                DO UPDATE SET Count = Count + @Count
+                WHERE CustomerMobile = @CustomerMobile;";
+
+            using (var cmd = new SqliteCommand(insertOrUpdateQuery, connection, transaction))
+            {
+                cmd.Parameters.AddWithValue("@CustomerMobile", customerMobile);
+                cmd.Parameters.AddWithValue("@Denomination", denomination);
+                cmd.Parameters.AddWithValue("@Count", count);
+                cmd.ExecuteNonQuery();
+            }
+
+            transaction.Commit();
+        }
+
+
+
+        // 📤 Get dictionary data back from database (grouped by Denomination)
+        public static Dictionary<string, int> GetTxnInfo(string customerMobile)
+        {
+            var result = new Dictionary<string, int>();
+
+            using var connection = new SqliteConnection($"Data Source={DbPath}");
+            connection.Open();
+
+            // Group by Denomination and sum the counts
+            string selectQuery = @"
+                    SELECT Denomination, SUM(Count) AS TotalCount
+                    FROM RemainingTxnInfo
+                    WHERE CustomerMobile = @CustomerMobile
+                    GROUP BY Denomination;";
+
+            using var cmd = new SqliteCommand(selectQuery, connection);
+            cmd.Parameters.AddWithValue("@CustomerMobile", customerMobile);
+
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                string denomination = reader.GetString(0);   // Denomination
+                int totalCount = reader.GetInt32(1);     // SUM(Count)
+                result[denomination] = totalCount;
+            }
+
+            return result;
+        }
+
+
+
+        public static void ClearTxnInfo(string customerMobile)
+        {
+            if (string.IsNullOrEmpty(customerMobile))
+            {
+                Logger.Log("⚠️ Cannot clear TxnInfo: CustomerMobile is null or empty.");
+                return;
+            }
+
+            using var connection = new SqliteConnection($"Data Source={DbPath}");
+            connection.Open();
+
+            // Use a transaction for the DELETE operation for safety
+            using var transaction = connection.BeginTransaction();
+
+            string deleteQuery = @"
+                DELETE FROM RemainingTxnInfo 
+                WHERE CustomerMobile = @CustomerMobile;";
+
+            using (var cmd = new SqliteCommand(deleteQuery, connection, transaction))
+            {
+                cmd.Parameters.AddWithValue("@CustomerMobile", customerMobile);
+                int rowsAffected = cmd.ExecuteNonQuery();
+                Logger.Log($"🗑️ Cleared {rowsAffected} transaction row(s) for mobile: {customerMobile}.");
+            }
+
+            transaction.Commit();
+        }
     }
+
 }

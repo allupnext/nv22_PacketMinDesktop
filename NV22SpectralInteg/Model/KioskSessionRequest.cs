@@ -20,6 +20,7 @@ public class KioskSessionData
     // Ensure property names match the JSON keys exactly (case-sensitive)
     public string KIOSKID { get; set; }
     public string REGID { get; set; }
+    public string STORENAME { get; set; }
     public string KIOSKNAME { get; set; }
     public string ADDRESS { get; set; }
     public string CITY { get; set; }

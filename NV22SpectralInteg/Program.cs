@@ -1,5 +1,6 @@
 ﻿using BCSKioskServerCrypto;
 using Newtonsoft.Json;
+using NV22SpectralInteg.Classes;
 using NV22SpectralInteg.Dashboard;
 using NV22SpectralInteg.Data;
 using NV22SpectralInteg.InactivityManager;

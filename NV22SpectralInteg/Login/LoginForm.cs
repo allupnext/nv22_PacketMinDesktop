@@ -5,6 +5,7 @@ using NV22SpectralInteg.Dashboard;
 using NV22SpectralInteg.Data;
 using NV22SpectralInteg.InactivityManager;
 using NV22SpectralInteg.Model;
+using NV22SpectralInteg.Network;
 using NV22SpectralInteg.NumPad;
 using NV22SpectralInteg.Services;
 using System;
@@ -546,6 +547,15 @@ namespace NV22SpectralInteg.Login
 
         private async void LoginButton_Click(object? sender, EventArgs e)
         {
+            var internet = await NetworkHelper.IsInternetAccessibleDetailedAsync();
+            if (!internet.IsConnected)
+            {
+                MessageBox.Show("No internet connection detected.",
+                                    "Network Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Logger.Log($"Connected: {internet.IsConnected}, Reason: {internet.Reason}");
+                return;
+            }
+
             Logger.Log("Login button clicked (Send OTP) 🔑");
             currentNumpad.Close();
 
@@ -629,7 +639,7 @@ namespace NV22SpectralInteg.Login
             
             fullMobileNumber = phonePrefix.Text.Trim() + phoneTextBox.Text.Trim();
             Logger.Log($"Attempting to send OTP to: {fullMobileNumber} 📲");
-
+            AppSession.CustomerMobile = fullMobileNumber;
             bool otpSentSuccessfully;
             try
             {
@@ -703,6 +713,18 @@ namespace NV22SpectralInteg.Login
 
         private async void VerifyButton_Click(object? sender, EventArgs e)
         {
+            var internet = await NetworkHelper.IsInternetAccessibleDetailedAsync();
+            if (!internet.IsConnected)
+            {
+                MessageBox.Show("No internet connection detected.",
+                                    "Network Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Logger.Log($"Connected: {internet.IsConnected}, Reason: {internet.Reason}");
+                AppSession.Clear();
+                Program.mainLoginForm.ResetToLogin();
+                Program.mainLoginForm.Show();
+                return;
+            }
+
             Logger.Log("Verify OTP button clicked 🔐");
             currentNumpad.Close();
             string otp = otpTextBoxes[0].Text + otpTextBoxes[1].Text + otpTextBoxes[2].Text + otpTextBoxes[3].Text;
@@ -800,6 +822,7 @@ namespace NV22SpectralInteg.Login
             // Reset UI first
             subtitle.Text = "Login";
             phoneTextBox.Text = "";
+            phonePrefix.Text = "+1";
 
             // Hide OTP-related controls
             otpLabel.Visible = false;
@@ -1017,6 +1040,7 @@ namespace NV22SpectralInteg.Login
                 AppSession.KioskId = kioskInfo.kioskId;
                 AppSession.KioskRegId = kioskInfo.kioskRegId;
                 AppSession.StoreName = kioskInfo.storeName;
+                AppSession.KioskName = kioskInfo.kioskName;
                 AppSession.StoreAddress = kioskInfo.storeAddress;
 
                 kioskPanel.Visible = false;
@@ -1131,6 +1155,17 @@ namespace NV22SpectralInteg.Login
 
             submitBtn.Click += async (s, e) =>
             {
+                var internet = await NetworkHelper.IsInternetAccessibleDetailedAsync();
+                if (!internet.IsConnected)
+                {
+                    MessageBox.Show("No internet connection detected.",
+                                        "Network Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    Logger.Log($"Connected: {internet.IsConnected}, Reason: {internet.Reason}");
+                    return;
+                }
+
+
+
                 currentNumpad.Close();
                 string kioskId = kioskTextBox.Text.Trim();
                 if (string.IsNullOrWhiteSpace(kioskId))

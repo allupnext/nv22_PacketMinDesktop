@@ -16,6 +16,7 @@ namespace NV22SpectralInteg
         public static string? KioskRegId { get; set; }
         public static string? CustomerRegId { get; set; }
         public static string? CustomerName { get; set; }
+        public static string? KioskName { get; set; } = null;
         public static string? StoreName { get; set; } = null;
         public static string? StoreAddress { get; set; } = null;
         public static decimal? StoreBalance { get; set; } = 0.00m;
@@ -29,7 +30,7 @@ namespace NV22SpectralInteg
 
         public static void Clear()
         {
-            CustomerName = "User";
+            CustomerName = null;
             CustomerMobile = null;
             CustomerBALANCE = 0.00m;
             smsId = null;

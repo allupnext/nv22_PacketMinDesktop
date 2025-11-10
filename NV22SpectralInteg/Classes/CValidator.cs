@@ -1,5 +1,6 @@
 ﻿
 using ITLlib;
+using NV22SpectralInteg.Data;
 using NV22SpectralInteg.Helpers;
 using NV22SpectralInteg.InactivityManager;
 using System;
@@ -676,6 +677,33 @@ namespace NV22SpectralInteg.Classes
             }
         }
 
+        public void UpdateCountsFromDb(string customerMobile)
+        {
+            if (string.IsNullOrEmpty(customerMobile))
+                return;
+
+            Dictionary<string, int> dbCounts = TransactionRepository.GetTxnInfo(customerMobile);
+
+            if (dbCounts == null || dbCounts.Count == 0)
+                return;
+
+            lock (_countsLock)
+            {
+                foreach (var kvp in dbCounts)
+                {
+                    if (_noteEscrowCounts.ContainsKey(kvp.Key))
+                    {
+                        _noteEscrowCounts[kvp.Key] += kvp.Value; // Add to existing count
+                    }
+                    else
+                    {
+                        _noteEscrowCounts[kvp.Key] = kvp.Value; // Add new entry
+                    }
+                }
+            }
+        }
+
+
         public event Action<string, int> NoteEscrowUpdated;
 
         public void ClearNoteEscrowCounts()
@@ -727,6 +755,7 @@ namespace NV22SpectralInteg.Classes
                             break;
 
                         case CCommands.SSP_POLL_READ_NOTE:
+                        {
                             KioskIdleManager.ResetTimer();
 
                             if (m_cmd.ResponseData[i + 1] > 0)
@@ -736,42 +765,45 @@ namespace NV22SpectralInteg.Classes
                                 string formattedAmount = CHelpers.FormatToCurrency(noteVal);
                                 string key = $"{formattedAmount} {currency}";
 
-                                lock (_countsLock)
-                                {
-                                    bool existing = _noteEscrowCounts.ContainsKey(key);
-                                    if (existing)
-                                    {
-                                        _noteEscrowCounts[key]++;
-                                    }
-                                    else
-                                    {
-                                        _noteEscrowCounts[key] = 1;
-                                    }
-                                }
-
-                                OnNoteEscrowUpdated(key, _noteEscrowCounts[key]);  // 👈 This triggers event log
+                               
                                 m_HoldCount = m_HoldNumber;
                                 Logger.Log($"📥 Escrow: {formattedAmount} {currency} (count {_noteEscrowCounts[key]})");
 
                             }
                             else
                             {
-                                log.AppendText("Reading note...\r\n");
+                                log?.AppendText("Reading note...\r\n");
                                 Logger.Log("Reading note...");
                             }
                             i++;
                             break;
+                        }
                         case CCommands.SSP_POLL_CREDIT_NOTE:
+                        {
                             noteVal = GetChannelValue(m_cmd.ResponseData[i + 1]);
                             string creditCurrency = GetChannelCurrency(m_cmd.ResponseData[i + 1]);
                             string formatted = CHelpers.FormatToCurrency(noteVal);
+                            string key = $"{formatted} {creditCurrency}";
 
+                            lock (_countsLock)
+                            {
+                                if (_noteEscrowCounts.ContainsKey(key))
+                                    _noteEscrowCounts[key]++;
+                                else
+                                    _noteEscrowCounts[key] = 1;
+                            }
+
+                            OnNoteEscrowUpdated(key, _noteEscrowCounts[key]);  
                             log?.AppendText($"Credit: {formatted} {creditCurrency}\r\n");
                             Logger.Log($"💵 Credit: {formatted} {creditCurrency}");
                             m_NumStackedNotes++;
+
+                            string customerMobile = AppSession.CustomerMobile!;
+                            TransactionRepository.SaveTxn(customerMobile, key, 1);
+                            Logger.Log($"💾 Saved transaction for single note: {noteVal} {creditCurrency} to DB.");
                             i++;
                             break;
-
+                        }
                         case CCommands.SSP_POLL_NOTE_REJECTED:
                             log?.AppendText("Note rejected\r\n");
                             Logger.Log("❌ Note rejected.");

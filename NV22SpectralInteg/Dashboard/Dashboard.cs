@@ -1,9 +1,11 @@
 ﻿using BCSKioskServerCrypto;
 using Newtonsoft.Json;
 using NV22SpectralInteg.Classes;
+using NV22SpectralInteg.Data;
 using NV22SpectralInteg.InactivityManager;
 using NV22SpectralInteg.Login;
 using NV22SpectralInteg.Model;
+using NV22SpectralInteg.Network;
 using NV22SpectralInteg.Services;
 using System.Data;
 using System.Management;
@@ -68,7 +70,7 @@ namespace NV22SpectralInteg.Dashboard
                 return;
             }
 
-            var hasData = IsApiEnabled ? _validator?.NoteEscrowCounts.Any() ?? false : testCounts.Any();
+            var hasData = (_validator?.NoteEscrowCounts?.Any() ?? false);
 
             // Always center the main panels on resize
             CenterPanels();
@@ -377,6 +379,18 @@ namespace NV22SpectralInteg.Dashboard
 
         private async void ConfirmButton_Click(object sender, EventArgs e)
         {
+            var internet = await NetworkHelper.IsInternetAccessibleDetailedAsync();
+            if (!internet.IsConnected)
+            {
+                MessageBox.Show("No internet connection detected.",
+                                    "Network Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Logger.Log($"Connected: {internet.IsConnected}, Reason: {internet.Reason}");
+                AppSession.Clear();
+                Program.mainLoginForm.ResetToLogin();
+                Program.mainLoginForm.Show();
+                return;
+            }
+
             KioskIdleManager.Stop();
             stoprunning();
 
@@ -529,8 +543,7 @@ namespace NV22SpectralInteg.Dashboard
             Logger.Log("CreateNotesTable called.");
 
             grandTotal = 0;
-            var counts = IsApiEnabled ? _validator?.NoteEscrowCounts ?? new Dictionary<string, int>() : testCounts;
-            //var counts = testCounts;
+            var counts = _validator?.NoteEscrowCounts ?? new Dictionary<string, int>();
             Logger.Log($"Counts loaded. Total denominations: {counts.Count}");
 
             notesTable = new TableLayoutPanel
@@ -704,7 +717,7 @@ namespace NV22SpectralInteg.Dashboard
 
         private void ToggleDataView()
         {
-            var hasData = IsApiEnabled ? _validator?.NoteEscrowCounts.Any() ?? false : testCounts.Any();
+            var hasData = (_validator?.NoteEscrowCounts?.Any() ?? false);
 
             // Clear all controls from the content panel first
             contentPanel.Controls.Clear();
@@ -884,8 +897,10 @@ namespace NV22SpectralInteg.Dashboard
                 //    comboBoxComPorts.Enabled = false;
                 //}
 
-                if (!IsApiEnabled)
+
+                if (IsApiEnabled)
                 {
+                    _validator.UpdateCountsFromDb(AppSession.CustomerMobile!);
                     UpdateNotesDisplay();
                 }
             }
@@ -1231,20 +1246,6 @@ namespace NV22SpectralInteg.Dashboard
 
 
 
-        public Dictionary<string, int> testCounts = new Dictionary<string, int>
-        {
-            { "$1", 2 },
-            { "$2", 2 },
-            { "$5", 2 },
-            { "$10", 2 },
-            { "$20", 2 },
-            { "$50", 2 },
-            { "$100", 2 }
-        };
 
-        //public Dictionary<string, int> testCounts = new Dictionary<string, int>
-        //{
-        //    { "$0", 0 },
-        //};
     }
 }

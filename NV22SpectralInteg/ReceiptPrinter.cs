@@ -102,11 +102,23 @@ namespace BCSKioskServerCrypto
                 e.Graphics.DrawString($"{DateTime.Now:dd/MM/yyyy HH:mm:ss} EST", font, Brushes.Black, receiptX + labelWidth, y);
                 y += lineHeight;
 
-                // --- KIOSK ID ---
-                e.Graphics.DrawString("Kiosk ID: ", boldFont, Brushes.Black, receiptX, y);
-                labelWidth = e.Graphics.MeasureString("Kiosk ID: ", boldFont).Width;
-                e.Graphics.DrawString(AppSession.KioskId, font, Brushes.Black, receiptX + labelWidth, y);
-                y += lineHeight;
+                // --- KIOSK Name ---
+                string kioskNameLabel = "Kiosk Name: ";
+                e.Graphics.DrawString(kioskNameLabel, boldFont, Brushes.Black, receiptX, y);
+                labelWidth = e.Graphics.MeasureString("Kiosk Name: ", boldFont).Width;
+                
+                string kioskNameValue = AppSession.KioskName;
+                RectangleF kioskNameRect = new RectangleF(receiptX + labelWidth, y, e.PageBounds.Width - (2 * receiptX) - labelWidth, 100);
+                e.Graphics.DrawString(kioskNameValue, font, Brushes.Black, kioskNameRect);
+                SizeF kioskNameSize = e.Graphics.MeasureString(kioskNameValue, font, (int)(e.PageBounds.Width - (2 * receiptX) - labelWidth));
+                if (kioskNameValue == null)
+                {
+                    y += lineHeight - 2;
+                }
+                else
+                {
+                    y += kioskNameSize.Height;
+                }
 
                 // --- STORE NAME ---
                 string storeNameLabel = "Store Name: ";
@@ -209,7 +221,7 @@ namespace BCSKioskServerCrypto
                 printDocument.DefaultPageSettings.PaperSize = paperSize;
 
                 //printPreviewDialog.ShowDialog();
-                printDocument.Print();
+                printDocument.Print();  
                 // SessionManager.status = true; // Not defined in the provided code
                 Logger.Log("✅ [printReceipt Call] Completed...");
                 return true;
@@ -245,8 +257,12 @@ namespace BCSKioskServerCrypto
                 // --- TIMESTAMP ---
                 totalHeight += lineHeight;
 
-                // --- KIOSK ID ---
-                totalHeight += lineHeight;
+                // --- KIOSK Name ---
+                string KioskName = AppSession.KioskName ?? "N/A";
+                string KioskNamelable = "Kiosk Name: ";
+                float lableWidth = g.MeasureString(KioskNamelable, boldFont).Width;
+                SizeF kioskNameSize = g.MeasureString(KioskName, font, (int)(receiptWidth - lableWidth - 20));
+                totalHeight += (int)kioskNameSize.Height;
 
                 // --- STORE NAME ---
                 string storeName = AppSession.StoreName ?? "N/A";
