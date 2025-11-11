@@ -382,8 +382,8 @@ namespace NV22SpectralInteg.Dashboard
             var internet = await NetworkHelper.IsInternetAccessibleDetailedAsync();
             if (!internet.IsConnected)
             {
-                MessageBox.Show("No internet connection detected.",
-                                    "Network Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("No internet connection detected.\nPlease try again once the internet connection is restored on this kiosk to complete your transaction.",
+                 "Network Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 Logger.Log($"Connected: {internet.IsConnected}, Reason: {internet.Reason}");
                 AppSession.Clear();
                 Program.mainLoginForm.ResetToLogin();
