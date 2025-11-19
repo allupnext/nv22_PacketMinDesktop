@@ -35,6 +35,7 @@ namespace NV22SpectralInteg.Login
         private Panel loginPanel;
         private FlowLayoutPanel stackPanel;
         private TextBox phoneTextBox;
+        private TextBox kioskTextBox;
         private Label phonePrefix;
         private ComboBox countryDropdown;
         private List<CountryCode> countryCodes;
@@ -94,15 +95,13 @@ namespace NV22SpectralInteg.Login
 
             this.validator = new CValidator();
 
-            
+
 
             currentNumpad = new Numpad(new TextBox(), "")
             {
                 Owner = this // Set the owner for proper management
             };
-            currentNumpad.Hide();
-            currentNumpad.Owner = this; // Set the owner for proper management
-            currentNumpad.Hide();
+            currentNumpad.Hide(); // Hide it until an input field is clicked
         }
 
         private void InitializeCountryCodes()
@@ -822,7 +821,6 @@ namespace NV22SpectralInteg.Login
             // Reset UI first
             subtitle.Text = "Login";
             phoneTextBox.Text = "";
-            phonePrefix.Text = "+1";
 
             // Hide OTP-related controls
             otpLabel.Visible = false;
@@ -846,8 +844,10 @@ namespace NV22SpectralInteg.Login
             // Recalculate layout before focus
             CenterLoginUI(loginPanel);
 
-            // Set focus
+            // Set focus and show Numpad
             phoneTextBox.Focus();
+            // --- ADDED: Show Numpad immediately after setting focus ---
+            ShowNumpad(phoneTextBox, "MobileNumber");
 
             // Finally re-initialize idle manager
             KioskIdleManager.Initialize(Program.PerformLogout);
@@ -1034,6 +1034,10 @@ namespace NV22SpectralInteg.Login
                 {
                     subtitle.Visible = false;
                 }
+
+                // --- ADDED: Set focus and show Numpad for Kiosk number ---
+                kioskTextBox.Focus();
+                ShowNumpad(kioskTextBox, "KioskNumber");
             }
             else
             {
@@ -1049,6 +1053,10 @@ namespace NV22SpectralInteg.Login
                 {
                     subtitle.Visible = true;
                 }
+
+                // --- ADDED: Set focus and show Numpad for Mobile Number ---
+                phoneTextBox.Focus();
+                ShowNumpad(phoneTextBox, "MobileNumber");
             }
         }
 
@@ -1101,7 +1109,7 @@ namespace NV22SpectralInteg.Login
                 Padding = new Padding(10, 0, 10, 0)
             };
 
-            var kioskTextBox = new TextBox
+            kioskTextBox = new TextBox
             {
                 Text = isDevelopment ? "1" : "",
                 Font = new Font("Poppins", 11),
@@ -1203,6 +1211,9 @@ namespace NV22SpectralInteg.Login
                     CenterLoginUI(loginPanel);
                     this.Controls.Remove(kioskPanel);
                     kioskPanel.Dispose();
+
+                    phoneTextBox.Focus();
+                    ShowNumpad(phoneTextBox, "MobileNumber");
                 }
                 else
                 {
